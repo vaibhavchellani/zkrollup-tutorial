@@ -56,6 +56,12 @@ There are two actors involved in a rollup chain: Coordinator and User.
 
 <!-- ------------------------ -->
 
+## ZkSnark -- The Moon Math
+
+< Brief up about zkSnarks>
+< Relavent links to learn more >
+< How much are we going to use in this workshop >
+
 ## Using Circom and Snarkjs
 
 Duration: 2
@@ -113,7 +119,7 @@ Let's write a circuit to check:
 - that the sum of two private inputs `a + b` is equal to a public input `c`;
 - that the product `b * c` is equal to private input `d`;
 
-Let's get started 🎊🎉
+#### Let's get started 🎊🎉
 
 ```bash
 - $ cd 1_simple_arithmetic
@@ -199,7 +205,7 @@ Signing data and verifying signatures are an essential part of any rollup chain 
 
 This example works with useful libraries in `circomlib`. Note: we are using v0.0.6 of `circomlib`.
 
-Let's get started 🎊🎉
+#### Let's get started 🎊🎉
 
 ```bash
 - $ cd 2_verify_eddsa
@@ -241,7 +247,11 @@ You know the next steps, but here's some help
 
 ## Part-2 Challenge
 
-Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit. To get you started:
+#### Goal
+
+Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.
+
+To get you started:
 
 ```
 include "../circomlib/circuits/eddsamimc.circom";
@@ -275,25 +285,40 @@ component main = VerifyEdDSAMiMC(3);
 
 ## Part-3 Verifying a Merkle proof
 
-`cd 3_verify_merkle`
+duration: 3
 
 This example shows how to write smaller templates and use them as components in the main circuit. To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let's break this down into two circuits:
 
 1. `get_merkle_root.circom`: this takes a leaf and a Merkle path and returns the computed Merkle root.
 2. `leaf_existence.circom`: this compares an expected Merkle root with a computed Merkle root.
 
-Create new file named `get_merkle_root.circom` and paste this code in:
+#### Let's get started 🎊🎉
+
+```bash
+- $ cd 3_verify_merkle
+- $ touch get_merkle_root.circom
 
 ```
+
+Paste the below code to get_merkle_root.circom and go through the in line documentation.
+
+```C##
 include "../circomlib/circuits/mimc.circom";
 
 template GetMerkleRoot(k){
-// k is depth of tree
+    // k is depth of tree
 
+    // merkel leaf
     signal input leaf;
+
+    // path from leaf to root
     signal input paths2_root[k];
+
+    // path from leaf to root with pos
     signal input paths2_root_pos[k];
 
+
+    // the output variable
     signal output out;
 
     // hash of first two entries in tx Merkle proof
@@ -311,18 +336,16 @@ template GetMerkleRoot(k){
 
     // output computed Merkle root
     out <== merkle_root[k-1].out;
-
 }
 
 component main = GetMerkleRoot(2);
-
 ```
 
 Try to fill in the second line of the `for` loop using the pattern from the lines before. (The solution is in `sample_get_merkle_root.circom`.)
 
 Now, make the second file `leaf_existence.circom` and paste this in:
 
-```
+```C##
 include "./get_merkle_root.circom";
 
 // checks for existence of leaf in tree of depth k
@@ -359,9 +382,55 @@ Modify your input to work with `leaf_existence.circom`.
 
 Like you did in the EdDSA verification exercise, provide the preimage of the leaf hash as private inputs to `leaf_existence.circom`, and hash them in the circuit.
 
-## Data Structures
+## Deep dive into ZkRollup
+
+All state in a rollup chain is stored in a tree whose root is kept on chain and can only be changed by submitting a snark proof which certifies valid state transitions off chain. For this workshop since we are doing ERC20 style transfers we can store user balance in the leaf of merkel tree. Let's find out more!
+
+### Account leaf format
+
+Each account is represented by a single leaf in the accounts tree. It is calculated by hashing the following components in the following order:
+
+`leaf = Hash(pubkey_x, pubkey_y, balance, nonce, token_type)`
+
+The account is represented by the following inputs:
+
+```js
+class Account = {
+    pubkey_x: public key X // (253 bits)
+    pubkey_y: public key Y //(253 bits)
+    balance: balance // (128 bits)
+    nonce: nonce // (32 bits)
+    token_type: token type // (32 bits)
+}
+```
+
+<TODO add accounts tree picture here>
+
+For the purpose of this workshop we are going to use this minimal account leaf structure.
+
+```js
+class Account = {
+    pubkey: eddsa_pubkey,
+    balance: integer
+}
+```
 
 ### Transaction
+
+For each SNARK, we construct a Transactions Merkle tree, whose leaves are the transactions processed by the SNARK.
+
+```js
+class Transaction = {
+  from: eddsa_pubKey,
+  fromIndex: integer, // from index is the index of sender's leaf in the accounts tree
+  to: eddsa_pubKey,
+  amount: integer,
+  nonce: integer,
+  token_type: integer
+}
+```
+
+For the purpose of this workshop we are going to use this minimal transaction structure.
 
 ```js
 class Transaction = {
@@ -371,32 +440,31 @@ class Transaction = {
 }
 ```
 
-### Account
-
-and an account as:
-
-```js
-class Account = {
-    pubkey: eddsa_pubkey,
-    balance: integer
-}
-```
-
-NOTE: we also have a nonce for protection against replay attacks, but for simplicity let's consider it in the next example.
+### Building ZkRollup Circuit
 
 In ZkRollup, processing a single transaction involves:
 
-- checking that the sender account existsin a tree of accounts, `accounts_root`
-- checking that the hash of the transaction was signed by the sender
-- debiting the sender account
-- updating the `accounts_root` to get `intermediate_root`
-- checking that the receiver account exists in `intermediate_root`
-- crediting the receiver account
-- updating the `accounts_root`to get `final_root`
+1. Checking that the sender account existsin a tree of accounts, `accounts_root`
+2. Checking that the hash of the transaction was signed by the sender
+3. Debiting the sender account
+4. Updating the `accounts_root` to get `intermediate_root`
+5. Checking that the receiver account exists in `intermediate_root`
+6. Crediting the receiver account
+7. Updating the `accounts_root`to get `final_root`
+
+### Deposits to rollup
+
+< Mention how deposits to rollup will work >
+< Mention that it is out of scope for workshop >
+< Mention links >
 
 ## Part 3 - Processing a single transaction
 
-Create a file called `circuit.circom` and put in this code. Fill in the signals for each component. Then, compile your circuit and test it against the `input.json` generated by running `node generate_circuit_input.js`.
+We will create a circuit to perform all checks and state updates we defined in the section before this.
+
+### Let's get started 🎊🎉
+
+Create a file called `circuit.json` and fill in this boilerplate code.
 
 ```C##
 include "./leaf_existence.circom";
@@ -404,16 +472,50 @@ include "./verify_eddsamimc.circom";
 include "./get_merkle_root.circom";
 include "../circomlib/circuits/mimc.circom";
 
+// create template
 template ProcessTx(k){
-    // k is depth of accounts tree
+  // STEP 1: Check sender's account existence
 
-    // accounts tree info
+  // STEP 2: Check sender's account signature
+
+  // STEP 3: Debit sender's account and create updated leaf
+
+  // STEP 4: Update accounts tree root with changes to sender's balance ie Debit sender's account
+  // Let's call this new root "intermediate root"
+
+  // STEP 5: Verify if receiver's account exists in intermediate root
+
+  // STEP 6: Credit receiver's account
+
+  // STEP 7: Update account's root with updates to receiver's account
+
+  // STEP 8: Output final root
+}
+
+// create main so that we can call it directly
+component main = ProcessTx(1);
+```
+
+## Step 0 - Initialise inputs and output signals
+
+To initialise signals just copy paste the below code in the boiler plate.
+
+```C##
+    // NOTE: `k` is the account tree depth
+
+    // accounts tree initial root
     signal input accounts_root;
+
+    // account tree root after 1 update
     signal private input intermediate_root;
+
+    // account pubkeys
     signal private input accounts_pubkeys[2**k, 2];
+
+    // account balances
     signal private input accounts_balances[2**k];
 
-    // transactions info
+    // transactions input
     signal private input sender_pubkey[2];
     signal private input sender_balance;
     signal private input receiver_pubkey[2];
@@ -427,9 +529,18 @@ template ProcessTx(k){
     signal private input receiver_proof[k];
     signal private input receiver_proof_pos[k];
 
-    // output
+    // final account tree root as output
     signal output new_accounts_root;
 
+```
+
+<!-- ------------------------ -->
+
+## Step 1 - Check Sender existence
+
+Check sender existence using the LeafExistence circuit we created in 'Part-3`. Copy paste the below code and fill out the correct signals.
+
+```C##
     // verify sender account exists in accounts_root
     component senderExistence = LeafExistence(k, 3);
     senderExistence.preimage[0] <== sender_pubkey[0];
@@ -440,57 +551,109 @@ template ProcessTx(k){
         senderExistence.paths2_root_pos[i] <== sender_proof_pos[i];
         senderExistence.paths2_root[i] <== sender_proof[i];
     }
+```
 
+<!-- ------------------------ -->
+
+## Step 2 - Check sender signature
+
+Check that sender signature is correct and sender has signed the right message using the `VerifyEdDSAMiMC` circuit we created in `Part-2`
+
+```C##
     // check that transaction was signed by sender
     component signatureCheck = VerifyEdDSAMiMC(5);
+
     signatureCheck.from_x <== sender_pubkey[0];
     signatureCheck.from_y <== sender_pubkey[1];
+
     signatureCheck.R8x <== signature_R8x;
     signatureCheck.R8y <== signature_R8y;
     signatureCheck.S <== signature_S;
+
     signatureCheck.preimage[0] <== sender_pubkey[0];
     signatureCheck.preimage[1] <== sender_pubkey[1];
     signatureCheck.preimage[2] <== receiver_pubkey[0];
     signatureCheck.preimage[3] <== receiver_pubkey[1];
     signatureCheck.preimage[4] <== amount;
+```
 
+<!-- ------------------------ -->
+
+## Step 3 - Debit sender account
+
+We need to reduce balance of sender by amount he is trying to transfer, so if sender's balance was 100 before transfer of 10, after transfer it should be 90. Also hash the new account leaf using `MultiMiMC7` circuit template.
+
+```C##
     // debit sender account and hash new sender leaf
     component newSenderLeaf = MultiMiMC7(3,91){
         newSenderLeaf.in[0] <== sender_pubkey[0];
         newSenderLeaf.in[1] <== sender_pubkey[1];
         newSenderLeaf.in[2] <== sender_balance - amount;
     }
+```
 
-    // update accounts_root
+<!-- ------------------------ -->
+
+## Step 4 - Create intermediate root
+
+```C##
+    // create a component using `GetMerkleRoot` circuit.
     component computed_intermediate_root = GetMerkleRoot(k);
     computed_intermediate_root.leaf <== newSenderLeaf.out;
     for (var i = 0; i < k; i++){
         computed_intermediate_root.paths2_root_pos[i] <== sender_proof_pos[i];
         computed_intermediate_root.paths2_root[i] <== sender_proof[i];
     }
-
     // check that computed_intermediate_root.out === intermediate_root
     computed_intermediate_root.out === intermediate_root;
-
-    // verify receiver account exists in intermediate_root
-    component receiverExistence = LeafExistence(k, 3);
-       // provide the appropriate signals to this component! see senderExistence for reference
-
-    // credit receiver account and hash new receiver leaf
-    component newReceiverLeaf = MultiMiMC7(3,91){
-       // provide the appropriate signals to this component! see newSenderLeaf for reference
-    }
-
-    // update accounts_root
-    component computed_final_root = GetMerkleRoot(k);
-       // provide the appropriate signals to this component! see computed_intermediate_root for reference
-
-    // output final accounts_root
-    new_accounts_root <== computed_final_root.out;
-}
-
-component main = ProcessTx(1);
 ```
+
+<!-- ------------------------ -->
+
+## Step 5 - Verify receiver account existence
+
+```C##
+  // verify receiver account exists in intermediate_root
+  component receiverExistence = LeafExistence(k, 3);
+  // provide the appropriate signals to this component! see senderExistence for reference
+
+```
+
+<!-- ------------------------ -->
+
+## Step 6 - Credit receiver's account
+
+```C##
+  // credit receiver account and hash new receiver leaf
+  component newReceiverLeaf = MultiMiMC7(3,91){
+  // provide the appropriate signals to this component! see newSenderLeaf for reference
+  }
+
+```
+
+<!-- ------------------------ -->
+
+## Step 7 - Update accounts root with receiver leaf update
+
+```C##
+// update accounts_root
+component computed_final_root = GetMerkleRoot(k);
+// provide the appropriate signals to this component! see computed_intermediate_root for reference
+
+```
+
+## Step 8 - Output final account tree root
+
+```C##
+  // output final accounts_root
+    new_accounts_root <== computed_final_root.out;
+```
+
+<!-- ------------------------ -->
+
+## Prove on-chain
+
+< Add how to create solidity file and how to verify proof>
 
 ## Processing multiple transactions
 

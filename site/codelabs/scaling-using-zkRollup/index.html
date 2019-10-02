@@ -64,6 +64,12 @@
 
       </google-codelab-step>
     
+      <google-codelab-step label="ZkSnark – The Moon Math" duration="0">
+        <p>&lt; Brief up about zkSnarks&gt;<br>&lt; Relavent links to learn more &gt;<br>&lt; How much are we going to use in this workshop &gt;</p>
+
+
+      </google-codelab-step>
+    
       <google-codelab-step label="Using Circom and Snarkjs" duration="2">
         <p>Circom and snarkjs are these compiler and helper packages by IDEN3 to compile and use circuits. They are JS based and hence very easy to use for small circuits. We will go through some commands which we will be using in this tutorial.</p>
 <h3 is-upgraded>Compiling circom circuits</h3>
@@ -98,7 +104,7 @@
 <li>that the sum of two private inputs <code>a + b</code> is equal to a public input <code>c</code>;</li>
 <li>that the product <code>b * c</code> is equal to private input <code>d</code>;</li>
 </ul>
-<p>Let&#39;s get started 🎊🎉</p>
+<h3 is-upgraded>Let&#39;s get started 🎊🎉</h3>
 <pre><code>- $ cd 1_simple_arithmetic
 - $ touch circuit.circom
 
@@ -177,7 +183,7 @@ component main = SimpleChecks(4);
       <google-codelab-step label="Part-2 Verifying an EdDSA signature" duration="0">
         <p>Signing data and verifying signatures are an essential part of any rollup chain you want to design. We use the EdDSA signature because it&#39;s much more efficient.</p>
 <p>This example works with useful libraries in <code>circomlib</code>. Note: we are using v0.0.6 of <code>circomlib</code>.</p>
-<p>Let&#39;s get started 🎊🎉</p>
+<h3 is-upgraded>Let&#39;s get started 🎊🎉</h3>
 <pre><code>- $ cd 2_verify_eddsa
 - $ touch circuit.circom
 
@@ -217,7 +223,9 @@ component main = VerifyEdDSAMiMC();
       </google-codelab-step>
     
       <google-codelab-step label="Part-2 Challenge" duration="0">
-        <p>Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit. To get you started:</p>
+        <h3 is-upgraded>Goal</h3>
+<p>Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.</p>
+<p>To get you started:</p>
 <pre><code>include &#34;../circomlib/circuits/eddsamimc.circom&#34;;
 include &#34;../circomlib/circuits/mimc.circom&#34;;
 
@@ -250,23 +258,34 @@ component main = VerifyEdDSAMiMC(3);
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part-3 Verifying a Merkle proof" duration="0">
-        <p><code>cd 3_verify_merkle</code></p>
-<p>This example shows how to write smaller templates and use them as components in the main circuit. To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let&#39;s break this down into two circuits:</p>
+      <google-codelab-step label="Part-3 Verifying a Merkle proof" duration="3">
+        <p>This example shows how to write smaller templates and use them as components in the main circuit. To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let&#39;s break this down into two circuits:</p>
 <ol type="1">
 <li><code>get_merkle_root.circom</code>: this takes a leaf and a Merkle path and returns the computed Merkle root.</li>
 <li><code>leaf_existence.circom</code>: this compares an expected Merkle root with a computed Merkle root.</li>
 </ol>
-<p>Create new file named <code>get_merkle_root.circom</code> and paste this code in:</p>
+<h3 is-upgraded>Let&#39;s get started 🎊🎉</h3>
+<pre><code>- $ cd 3_verify_merkle
+- $ touch get_merkle_root.circom
+
+</code></pre>
+<p>Paste the below code to get_merkle_root.circom and go through the in line documentation.</p>
 <pre><code>include &#34;../circomlib/circuits/mimc.circom&#34;;
 
 template GetMerkleRoot(k){
-// k is depth of tree
+    // k is depth of tree
 
+    // merkel leaf
     signal input leaf;
+
+    // path from leaf to root
     signal input paths2_root[k];
+
+    // path from leaf to root with pos
     signal input paths2_root_pos[k];
 
+
+    // the output variable
     signal output out;
 
     // hash of first two entries in tx Merkle proof
@@ -284,11 +303,9 @@ template GetMerkleRoot(k){
 
     // output computed Merkle root
     out &lt;== merkle_root[k-1].out;
-
 }
 
 component main = GetMerkleRoot(2);
-
 </code></pre>
 <p>Try to fill in the second line of the <code>for</code> loop using the pattern from the lines before. (The solution is in <code>sample_get_merkle_root.circom</code>.)</p>
 <p>Now, make the second file <code>leaf_existence.circom</code> and paste this in:</p>
@@ -331,53 +348,114 @@ component main = LeafExistence(2);
 
       </google-codelab-step>
     
-      <google-codelab-step label="Data Structures" duration="0">
-        <h2 is-upgraded>Transaction</h2>
+      <google-codelab-step label="Deep dive into ZkRollup" duration="0">
+        <p>All state in a rollup chain is stored in a tree whose root is kept on chain and can only be changed by submitting a snark proof which certifies valid state transitions off chain. For this workshop since we are doing ERC20 style transfers we can store user balance in the leaf of merkel tree. Let&#39;s find out more!</p>
+<h2 is-upgraded>Account leaf format</h2>
+<p>Each account is represented by a single leaf in the accounts tree. It is calculated by hashing the following components in the following order:</p>
+<p><code>leaf = Hash(pubkey_x, pubkey_y, balance, nonce, token_type)</code></p>
+<p>The account is represented by the following inputs:</p>
+<pre><code>class Account = {
+    pubkey_x: public key X // (253 bits)
+    pubkey_y: public key Y //(253 bits)
+    balance: balance // (128 bits)
+    nonce: nonce // (32 bits)
+    token_type: token type // (32 bits)
+}
+</code></pre>
+<p>For the purpose of this workshop we are going to use this minimal account leaf structure.</p>
+<pre><code>class Account = {
+    pubkey: eddsa_pubkey,
+    balance: integer
+}
+</code></pre>
+<h2 is-upgraded>Transaction</h2>
+<p>For each SNARK, we construct a Transactions Merkle tree, whose leaves are the transactions processed by the SNARK.</p>
+<pre><code>class Transaction = {
+  from: eddsa_pubKey,
+  fromIndex: integer, // from index is the index of sender&#39;s leaf in the accounts tree
+  to: eddsa_pubKey,
+  amount: integer,
+  nonce: integer,
+  token_type: integer
+}
+</code></pre>
+<p>For the purpose of this workshop we are going to use this minimal transaction structure.</p>
 <pre><code>class Transaction = {
     from: eddsa_pubkey,
     to: eddsa_pubkey,
     amount: integer
 }
 </code></pre>
-<h2 is-upgraded>Account</h2>
-<p>and an account as:</p>
-<pre><code>class Account = {
-    pubkey: eddsa_pubkey,
-    balance: integer
-}
-</code></pre>
-<p>NOTE: we also have a nonce for protection against replay attacks, but for simplicity let&#39;s consider it in the next example.</p>
+<h2 is-upgraded>Building ZkRollup Circuit</h2>
 <p>In ZkRollup, processing a single transaction involves:</p>
-<ul>
-<li>checking that the sender account existsin a tree of accounts, <code>accounts_root</code></li>
-<li>checking that the hash of the transaction was signed by the sender</li>
-<li>debiting the sender account</li>
-<li>updating the <code>accounts_root</code> to get <code>intermediate_root</code></li>
-<li>checking that the receiver account exists in <code>intermediate_root</code></li>
-<li>crediting the receiver account</li>
-<li>updating the <code>accounts_root</code>to get <code>final_root</code></li>
-</ul>
+<ol type="1">
+<li>Checking that the sender account existsin a tree of accounts, <code>accounts_root</code></li>
+<li>Checking that the hash of the transaction was signed by the sender</li>
+<li>Debiting the sender account</li>
+<li>Updating the <code>accounts_root</code> to get <code>intermediate_root</code></li>
+<li>Checking that the receiver account exists in <code>intermediate_root</code></li>
+<li>Crediting the receiver account</li>
+<li>Updating the <code>accounts_root</code>to get <code>final_root</code></li>
+</ol>
+<h2 is-upgraded>Deposits to rollup</h2>
+<p>&lt; Mention how deposits to rollup will work &gt;<br>&lt; Mention that it is out of scope for workshop &gt;<br>&lt; Mention links &gt;</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Part 3 - Processing a single transaction" duration="0">
-        <p>Create a file called <code>circuit.circom</code> and put in this code. Fill in the signals for each component. Then, compile your circuit and test it against the <code>input.json</code> generated by running <code>node generate_circuit_input.js</code>.</p>
+        <p>We will create a circuit to perform all checks and state updates we defined in the section before this.</p>
+<h2 is-upgraded>Let&#39;s get started 🎊🎉</h2>
+<p>Create a file called <code>circuit.json</code> and fill in this boilerplate code.</p>
 <pre><code>include &#34;./leaf_existence.circom&#34;;
 include &#34;./verify_eddsamimc.circom&#34;;
 include &#34;./get_merkle_root.circom&#34;;
 include &#34;../circomlib/circuits/mimc.circom&#34;;
 
+// create template
 template ProcessTx(k){
-    // k is depth of accounts tree
+  // STEP 1: Check sender&#39;s account existence
 
-    // accounts tree info
+  // STEP 2: Check sender&#39;s account signature
+
+  // STEP 3: Debit sender&#39;s account and create updated leaf
+
+  // STEP 4: Update accounts tree root with changes to sender&#39;s balance ie Debit sender&#39;s account
+  // Let&#39;s call this new root &#34;intermediate root&#34;
+
+  // STEP 5: Verify if receiver&#39;s account exists in intermediate root
+
+  // STEP 6: Credit receiver&#39;s account
+
+  // STEP 7: Update account&#39;s root with updates to receiver&#39;s account
+
+  // STEP 8: Output final root
+}
+
+// create main so that we can call it directly
+component main = ProcessTx(1);
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 0 - Initialise inputs and output signals" duration="0">
+        <p>To initialise signals just copy paste the below code in the boiler plate.</p>
+<pre><code>    // NOTE: `k` is the account tree depth
+
+    // accounts tree initial root
     signal input accounts_root;
+
+    // account tree root after 1 update
     signal private input intermediate_root;
+
+    // account pubkeys
     signal private input accounts_pubkeys[2**k, 2];
+
+    // account balances
     signal private input accounts_balances[2**k];
 
-    // transactions info
+    // transactions input
     signal private input sender_pubkey[2];
     signal private input sender_balance;
     signal private input receiver_pubkey[2];
@@ -391,10 +469,17 @@ template ProcessTx(k){
     signal private input receiver_proof[k];
     signal private input receiver_proof_pos[k];
 
-    // output
+    // final account tree root as output
     signal output new_accounts_root;
 
-    // verify sender account exists in accounts_root
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 1 - Check Sender existence" duration="0">
+        <p>Check sender existence using the LeafExistence circuit we created in ‘Part-3`. Copy paste the below code and fill out the correct signals.</p>
+<pre><code>    // verify sender account exists in accounts_root
     component senderExistence = LeafExistence(k, 3);
     senderExistence.preimage[0] &lt;== sender_pubkey[0];
     senderExistence.preimage[1] &lt;== sender_pubkey[1];
@@ -404,57 +489,102 @@ template ProcessTx(k){
         senderExistence.paths2_root_pos[i] &lt;== sender_proof_pos[i];
         senderExistence.paths2_root[i] &lt;== sender_proof[i];
     }
+</code></pre>
 
-    // check that transaction was signed by sender
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 2 - Check sender signature" duration="0">
+        <p>Check that sender signature is correct and sender has signed the right message using the <code>VerifyEdDSAMiMC</code> circuit we created in <code>Part-2</code></p>
+<pre><code>    // check that transaction was signed by sender
     component signatureCheck = VerifyEdDSAMiMC(5);
+
     signatureCheck.from_x &lt;== sender_pubkey[0];
     signatureCheck.from_y &lt;== sender_pubkey[1];
+
     signatureCheck.R8x &lt;== signature_R8x;
     signatureCheck.R8y &lt;== signature_R8y;
     signatureCheck.S &lt;== signature_S;
+
     signatureCheck.preimage[0] &lt;== sender_pubkey[0];
     signatureCheck.preimage[1] &lt;== sender_pubkey[1];
     signatureCheck.preimage[2] &lt;== receiver_pubkey[0];
     signatureCheck.preimage[3] &lt;== receiver_pubkey[1];
     signatureCheck.preimage[4] &lt;== amount;
+</code></pre>
 
-    // debit sender account and hash new sender leaf
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 3 - Debit sender account" duration="0">
+        <p>We need to reduce balance of sender by amount he is trying to transfer, so if sender&#39;s balance was 100 before transfer of 10, after transfer it should be 90. Also hash the new account leaf using <code>MultiMiMC7</code> circuit template.</p>
+<pre><code>    // debit sender account and hash new sender leaf
     component newSenderLeaf = MultiMiMC7(3,91){
         newSenderLeaf.in[0] &lt;== sender_pubkey[0];
         newSenderLeaf.in[1] &lt;== sender_pubkey[1];
         newSenderLeaf.in[2] &lt;== sender_balance - amount;
     }
+</code></pre>
 
-    // update accounts_root
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 4 - Create intermediate root" duration="0">
+        <pre><code>    // create a component using `GetMerkleRoot` circuit.
     component computed_intermediate_root = GetMerkleRoot(k);
     computed_intermediate_root.leaf &lt;== newSenderLeaf.out;
     for (var i = 0; i &lt; k; i++){
         computed_intermediate_root.paths2_root_pos[i] &lt;== sender_proof_pos[i];
         computed_intermediate_root.paths2_root[i] &lt;== sender_proof[i];
     }
-
     // check that computed_intermediate_root.out === intermediate_root
     computed_intermediate_root.out === intermediate_root;
-
-    // verify receiver account exists in intermediate_root
-    component receiverExistence = LeafExistence(k, 3);
-       // provide the appropriate signals to this component! see senderExistence for reference
-
-    // credit receiver account and hash new receiver leaf
-    component newReceiverLeaf = MultiMiMC7(3,91){
-       // provide the appropriate signals to this component! see newSenderLeaf for reference
-    }
-
-    // update accounts_root
-    component computed_final_root = GetMerkleRoot(k);
-       // provide the appropriate signals to this component! see computed_intermediate_root for reference
-
-    // output final accounts_root
-    new_accounts_root &lt;== computed_final_root.out;
-}
-
-component main = ProcessTx(1);
 </code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 5 - Verify receiver account existence" duration="0">
+        <pre><code>  // verify receiver account exists in intermediate_root
+  component receiverExistence = LeafExistence(k, 3);
+  // provide the appropriate signals to this component! see senderExistence for reference
+
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 6 - Credit receiver&#39;s account" duration="0">
+        <pre><code>  // credit receiver account and hash new receiver leaf
+  component newReceiverLeaf = MultiMiMC7(3,91){
+  // provide the appropriate signals to this component! see newSenderLeaf for reference
+  }
+
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 7 - Update accounts root with receiver leaf update" duration="0">
+        <pre><code>// update accounts_root
+component computed_final_root = GetMerkleRoot(k);
+// provide the appropriate signals to this component! see computed_intermediate_root for reference
+
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step 8 - Output final account tree root" duration="0">
+        <pre><code>  // output final accounts_root
+    new_accounts_root &lt;== computed_final_root.out;
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Prove on-chain" duration="0">
+        <p>&lt; Add how to create solidity file and how to verify proof&gt;</p>
 
 
       </google-codelab-step>
