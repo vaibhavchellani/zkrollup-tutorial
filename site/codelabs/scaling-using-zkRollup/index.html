@@ -1,0 +1,477 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>ZkRollup Tutorial</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/codelab-elements/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="scaling-using-zkRollup"
+                  title="ZkRollup Tutorial"
+                  environment="web"
+                  feedback-link="https://twitter.com/vaibhavchellani">
+    
+      <google-codelab-step label="Overview" duration="1">
+        <h2 is-upgraded>What you&#39;ll build</h2>
+<p>In this workshop we will build circuits for zkRollup using</p>
+<h2 class="checklist" is-upgraded>What you&#39;ll learn</h2>
+<p>You will learn how to build with zkRollup</p>
+<h2 is-upgraded>What you&#39;ll need</h2>
+<p>You will need circom and snarkjs</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="ZkRollup in a nutshell" duration="0">
+        <p>ZkSnarks have been used for privacy applications and for having private transactions on chains like ZCash for a few years now. Rollup utilises zkSnarks to scale ethereum by taking advantage of the succinctness and privacy provided by snarks.</p>
+<p>We achive scalability by not having to send user signatures on-chain and instead send one proof which signifies 1000&#39;s of signature verifications and other transaction validation checks have been done correctly off-chain.</p>
+<p>We send minified form of transactions on-chain as input to circuit to have data-available.</p>
+<h2 is-upgraded>How zkRollup works?</h2>
+<p>There are two actors involved in a rollup chain: Coordinator and User.</p>
+<ul>
+<li>We maintain account merkel tree on chain which can be updated by sending snark proof.</li>
+<li>Users sends transaction to coordinator with signatures via RPC/API&#39;s.</li>
+<li>Coordinator collects all the transactions and creates a batch which is processed by the snark circuit, if the circuit finds all transactions in the batch to be valid it emits a proof.</li>
+<li>This validity proof will be submitted and verified on chain which signifies that state was updated properly off-chain.</li>
+<li>This updates the onchain account merkel tree.</li>
+</ul>
+<p>We will dive into specifics of the construction in the next parts.</p>
+<h2 is-upgraded>Why zkRollup is Amazing ?</h2>
+<ul>
+<li>No exit games</li>
+<li>No liveliness assumptions</li>
+<li>No data availability issues</li>
+<li>Sub cent fees for transactions</li>
+<li>Can create rollup chain for any state transitions not just transfers( fairWin anyone?! )</li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Using Circom and Snarkjs" duration="2">
+        <p>Circom and snarkjs are these compiler and helper packages by IDEN3 to compile and use circuits. They are JS based and hence very easy to use for small circuits. We will go through some commands which we will be using in this tutorial.</p>
+<h3 is-upgraded>Compiling circom circuits</h3>
+<p>Compiles your circuit and generates compiled circuit in json format for snarkjs to use.</p>
+<pre><code>circom &lt;your_circuit_name&gt;.circom -o circuit.json`
+</code></pre>
+<h3 is-upgraded>Generate inputs for your circuit</h3>
+<p>Generates public private inputs for your circuit</p>
+<pre><code>node generate_circuit_input.js
+</code></pre>
+<p>Note: This exists only for the course of our workshop</p>
+<h3 is-upgraded>Calculate witness</h3>
+<p>Generates witness for your circuit using the compiled circuit and input file created in the above step</p>
+<pre><code>snarkjs calculatewitness -c circuit.json -i input.json
+</code></pre>
+<h3 is-upgraded>Performing trusted setup</h3>
+<p>Remember the infamous &#34;Trusted Setup&#34;, to perform trusted setup on your device for a circuit use the below command. It creates a Proving and Verification key for your circuit.</p>
+<pre><code>snarkjs setup -c circuit.json --protocol groth
+</code></pre>
+<h3 is-upgraded>Generate the proof</h3>
+<p>To generate proof for your circuit use the below command. It uses witness and proving key as inputs and generates a proof for you which can be passed around to certify correcct computation of circuit</p>
+<pre><code>snarkjs proof -w witness.json --pk proving_key.json
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 1 - Simple arithmetic constraints" duration="0">
+        <p>This is a contrived example to familiarise ourselves with the syntax of <code>circom</code> and how it works with <code>snarkjs</code>.</p>
+<p>Let&#39;s write a circuit to check:</p>
+<ul>
+<li>that the sum of two private inputs <code>a + b</code> is equal to a public input <code>c</code>;</li>
+<li>that the product <code>b * c</code> is equal to private input <code>d</code>;</li>
+</ul>
+<p>Let&#39;s get started 🎊🎉</p>
+<pre><code>- $ cd 1_simple_arithmetic
+- $ touch circuit.circom
+
+</code></pre>
+<pre><code>// create template
+template SimpleChecks() {
+    // declare a variables which will store private inputs
+    signal private input a;
+    signal private input b;
+    signal private input d;
+
+
+    // declare public input variables
+    signal input c;
+
+    // declate output variables
+    signal output out;
+
+    // force a + b = c
+    a + b === c;
+
+    // force b * c = d
+    // TODO : Fill in the constraint
+
+    // assign output to output variable
+    out &lt;== c + d;
+}
+
+// export the template
+component main = SimpleChecks();
+</code></pre>
+<p>Now that we are done with this small circuit let&#39;s see how we can generate the proof for this circuit</p>
+<ol type="1">
+<li>Compile it: <code>circom circuit.circom -o circuit.json</code></li>
+<li>Generate your input for the circuit: <code>node generate_circuit_input.js</code></li>
+<li>Calculate the witness for the circuit: <code>snarkjs calculatewitness -c circuit.json -i input.json</code></li>
+<li>Generate the proof: <code>snarkjs setup -c circuit.json --protocol groth</code></li>
+<li>Verify the proof: <code>snarkjs verify</code></li>
+</ol>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part-1 Challenge" duration="0">
+        <p>It&#39;s time for a challenge guys!</p>
+<p><strong>Goal</strong> : Modify the circuit and input to take in length-4 arrays of <code>a</code>, <code>b</code>, <code>c</code>, and <code>d</code>, and perform the checks in a <code>for</code> loop. Output the sums of <code>c</code> and <code>d</code> arrays.</p>
+<p>To get you started, here&#39;s some help</p>
+<pre><code>template SimpleChecks(k) {
+    signal private input a[k];
+    signal private input b[k];
+    signal input c[k];
+    signal private input d[k];
+    signal output out;
+
+    var sum = 0;
+    for (var i = 0; i &lt; k; i++){
+        // force a + b = c
+        a[i] + b[i] === c[i];
+
+        // force b * c = d
+        // fill this in
+
+        // add up c and d arrays
+        // use the variable &#39;sum&#39; defined outside the for loop
+    }
+    // output sum of c and d arrays
+    out &lt;== sum;
+}
+
+component main = SimpleChecks(4);
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part-2 Verifying an EdDSA signature" duration="0">
+        <p>Signing data and verifying signatures are an essential part of any rollup chain you want to design. We use the EdDSA signature because it&#39;s much more efficient.</p>
+<p>This example works with useful libraries in <code>circomlib</code>. Note: we are using v0.0.6 of <code>circomlib</code>.</p>
+<p>Let&#39;s get started 🎊🎉</p>
+<pre><code>- $ cd 2_verify_eddsa
+- $ touch circuit.circom
+
+</code></pre>
+<pre><code>include &#34;../circomlib/circuits/eddsamimc.circom&#34;;
+
+template VerifyEdDSAMiMC() {
+    signal input from_x;
+    signal input from_y;
+    signal input R8x;
+    signal input R8y;
+    signal input S;
+    signal input M;
+
+    component verifier = EdDSAMiMCVerifier();
+    verifier.enabled &lt;== 1;
+    verifier.Ax &lt;== from_x;
+    verifier.Ay &lt;== from_y;
+    verifier.R8x &lt;== R8x
+    verifier.R8y &lt;== R8y
+    verifier.S &lt;== S;
+    verifier.M &lt;== M;
+}
+
+component main = VerifyEdDSAMiMC();
+</code></pre>
+<p>You know the next steps, but here&#39;s some help</p>
+<ol type="1">
+<li>Compile it: <code>circom circuit.circom -o circuit.json</code></li>
+<li>Generate your input for the circuit: <code>node generate_circuit_input.js</code></li>
+<li>Calculate the witness for the circuit: <code>snarkjs calculatewitness -c circuit.json -i input.json</code></li>
+<li>Generate the proof: <code>snarkjs setup -c circuit.json --protocol groth</code></li>
+<li>Verify the proof: <code>snarkjs verify</code></li>
+</ol>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part-2 Challenge" duration="0">
+        <p>Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit. To get you started:</p>
+<pre><code>include &#34;../circomlib/circuits/eddsamimc.circom&#34;;
+include &#34;../circomlib/circuits/mimc.circom&#34;;
+
+template VerifyEdDSAMiMC(k) {
+    signal input from_x;
+    signal input from_y;
+    signal input R8x;
+    signal input R8y;
+    signal input S;
+    signal private input preimage[k];
+
+    component M = MultiMiMC7(k,91);
+    M.in[0] &lt;== // the first element of your preimage
+    M.in[1] &lt;== // the second element of your preimage
+    M.in[2] &lt;== // the third element of your preimage
+
+    component verifier = EdDSAMiMCVerifier();
+    verifier.enabled &lt;== 1;
+    verifier.Ax &lt;== from_x;
+    verifier.Ay &lt;== from_y;
+    verifier.R8x &lt;== R8x;
+    verifier.R8y &lt;== R8y;
+    verifier.S &lt;== S;
+    verifier.M &lt;== M.out;
+}
+
+component main = VerifyEdDSAMiMC(3);
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part-3 Verifying a Merkle proof" duration="0">
+        <p><code>cd 3_verify_merkle</code></p>
+<p>This example shows how to write smaller templates and use them as components in the main circuit. To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let&#39;s break this down into two circuits:</p>
+<ol type="1">
+<li><code>get_merkle_root.circom</code>: this takes a leaf and a Merkle path and returns the computed Merkle root.</li>
+<li><code>leaf_existence.circom</code>: this compares an expected Merkle root with a computed Merkle root.</li>
+</ol>
+<p>Create new file named <code>get_merkle_root.circom</code> and paste this code in:</p>
+<pre><code>include &#34;../circomlib/circuits/mimc.circom&#34;;
+
+template GetMerkleRoot(k){
+// k is depth of tree
+
+    signal input leaf;
+    signal input paths2_root[k];
+    signal input paths2_root_pos[k];
+
+    signal output out;
+
+    // hash of first two entries in tx Merkle proof
+    component merkle_root[k];
+    merkle_root[0] = MultiMiMC7(2,91);
+    merkle_root[0].in[0] &lt;== leaf - paths2_root_pos[0]* (leaf - paths2_root[0]);
+    merkle_root[0].in[1] &lt;== paths2_root[0] - paths2_root_pos[0]* (paths2_root[0] - leaf);
+
+    // hash of all other entries in tx Merkle proof
+    for (var v = 1; v &lt; k; v++){
+        merkle_root[v] = MultiMiMC7(2,91);
+        merkle_root[v].in[0] &lt;== paths2_root[v] - paths2_root_pos[v]* (paths2_root[v] - merkle_root[v-1].out);
+        merkle_root[v].in[1] &lt;== //can you figure this one out?
+    }
+
+    // output computed Merkle root
+    out &lt;== merkle_root[k-1].out;
+
+}
+
+component main = GetMerkleRoot(2);
+
+</code></pre>
+<p>Try to fill in the second line of the <code>for</code> loop using the pattern from the lines before. (The solution is in <code>sample_get_merkle_root.circom</code>.)</p>
+<p>Now, make the second file <code>leaf_existence.circom</code> and paste this in:</p>
+<pre><code>include &#34;./get_merkle_root.circom&#34;;
+
+// checks for existence of leaf in tree of depth k
+
+template LeafExistence(k){
+// k is depth of tree
+
+    signal input leaf;
+    signal input root;
+    signal input paths2_root_pos[k];
+    signal input paths2_root[k];
+
+    component computed_root = GetMerkleRoot(k);
+    computed_root.leaf &lt;== leaf;
+
+    for (var w = 0; w &lt; k; w++){
+        computed_root.paths2_root[w] &lt;== // assign elements from paths2_root
+        computed_root.paths2_root_pos[w] &lt;== // assign elements from paths2_root_pos
+    }
+
+    // equality constraint: input tx root === computed tx root
+    root === computed_root.out;
+
+}
+
+component main = LeafExistence(2);
+</code></pre>
+<p>Make sure to REMOVE <code>component main = GetMerkleRoot(2)</code> from <code>get_merkle_root.circom</code>.</p>
+<p>Modify your input to work with <code>leaf_existence.circom</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part-3 Challenge" duration="0">
+        <p>Like you did in the EdDSA verification exercise, provide the preimage of the leaf hash as private inputs to <code>leaf_existence.circom</code>, and hash them in the circuit.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Data Structures" duration="0">
+        <h2 is-upgraded>Transaction</h2>
+<pre><code>class Transaction = {
+    from: eddsa_pubkey,
+    to: eddsa_pubkey,
+    amount: integer
+}
+</code></pre>
+<h2 is-upgraded>Account</h2>
+<p>and an account as:</p>
+<pre><code>class Account = {
+    pubkey: eddsa_pubkey,
+    balance: integer
+}
+</code></pre>
+<p>NOTE: we also have a nonce for protection against replay attacks, but for simplicity let&#39;s consider it in the next example.</p>
+<p>In ZkRollup, processing a single transaction involves:</p>
+<ul>
+<li>checking that the sender account existsin a tree of accounts, <code>accounts_root</code></li>
+<li>checking that the hash of the transaction was signed by the sender</li>
+<li>debiting the sender account</li>
+<li>updating the <code>accounts_root</code> to get <code>intermediate_root</code></li>
+<li>checking that the receiver account exists in <code>intermediate_root</code></li>
+<li>crediting the receiver account</li>
+<li>updating the <code>accounts_root</code>to get <code>final_root</code></li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 3 - Processing a single transaction" duration="0">
+        <p>Create a file called <code>circuit.circom</code> and put in this code. Fill in the signals for each component. Then, compile your circuit and test it against the <code>input.json</code> generated by running <code>node generate_circuit_input.js</code>.</p>
+<pre><code>include &#34;./leaf_existence.circom&#34;;
+include &#34;./verify_eddsamimc.circom&#34;;
+include &#34;./get_merkle_root.circom&#34;;
+include &#34;../circomlib/circuits/mimc.circom&#34;;
+
+template ProcessTx(k){
+    // k is depth of accounts tree
+
+    // accounts tree info
+    signal input accounts_root;
+    signal private input intermediate_root;
+    signal private input accounts_pubkeys[2**k, 2];
+    signal private input accounts_balances[2**k];
+
+    // transactions info
+    signal private input sender_pubkey[2];
+    signal private input sender_balance;
+    signal private input receiver_pubkey[2];
+    signal private input receiver_balance;
+    signal private input amount;
+    signal private input signature_R8x;
+    signal private input signature_R8y;
+    signal private input signature_S;
+    signal private input sender_proof[k];
+    signal private input sender_proof_pos[k];
+    signal private input receiver_proof[k];
+    signal private input receiver_proof_pos[k];
+
+    // output
+    signal output new_accounts_root;
+
+    // verify sender account exists in accounts_root
+    component senderExistence = LeafExistence(k, 3);
+    senderExistence.preimage[0] &lt;== sender_pubkey[0];
+    senderExistence.preimage[1] &lt;== sender_pubkey[1];
+    senderExistence.preimage[2] &lt;== sender_balance;
+    senderExistence.root &lt;== accounts_root;
+    for (var i = 0; i &lt; k; i++){
+        senderExistence.paths2_root_pos[i] &lt;== sender_proof_pos[i];
+        senderExistence.paths2_root[i] &lt;== sender_proof[i];
+    }
+
+    // check that transaction was signed by sender
+    component signatureCheck = VerifyEdDSAMiMC(5);
+    signatureCheck.from_x &lt;== sender_pubkey[0];
+    signatureCheck.from_y &lt;== sender_pubkey[1];
+    signatureCheck.R8x &lt;== signature_R8x;
+    signatureCheck.R8y &lt;== signature_R8y;
+    signatureCheck.S &lt;== signature_S;
+    signatureCheck.preimage[0] &lt;== sender_pubkey[0];
+    signatureCheck.preimage[1] &lt;== sender_pubkey[1];
+    signatureCheck.preimage[2] &lt;== receiver_pubkey[0];
+    signatureCheck.preimage[3] &lt;== receiver_pubkey[1];
+    signatureCheck.preimage[4] &lt;== amount;
+
+    // debit sender account and hash new sender leaf
+    component newSenderLeaf = MultiMiMC7(3,91){
+        newSenderLeaf.in[0] &lt;== sender_pubkey[0];
+        newSenderLeaf.in[1] &lt;== sender_pubkey[1];
+        newSenderLeaf.in[2] &lt;== sender_balance - amount;
+    }
+
+    // update accounts_root
+    component computed_intermediate_root = GetMerkleRoot(k);
+    computed_intermediate_root.leaf &lt;== newSenderLeaf.out;
+    for (var i = 0; i &lt; k; i++){
+        computed_intermediate_root.paths2_root_pos[i] &lt;== sender_proof_pos[i];
+        computed_intermediate_root.paths2_root[i] &lt;== sender_proof[i];
+    }
+
+    // check that computed_intermediate_root.out === intermediate_root
+    computed_intermediate_root.out === intermediate_root;
+
+    // verify receiver account exists in intermediate_root
+    component receiverExistence = LeafExistence(k, 3);
+       // provide the appropriate signals to this component! see senderExistence for reference
+
+    // credit receiver account and hash new receiver leaf
+    component newReceiverLeaf = MultiMiMC7(3,91){
+       // provide the appropriate signals to this component! see newSenderLeaf for reference
+    }
+
+    // update accounts_root
+    component computed_final_root = GetMerkleRoot(k);
+       // provide the appropriate signals to this component! see computed_intermediate_root for reference
+
+    // output final accounts_root
+    new_accounts_root &lt;== computed_final_root.out;
+}
+
+component main = ProcessTx(1);
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Processing multiple transactions" duration="0">
+        <p>Processing multiple transactions requires us to update the <code>accounts_root</code> many times before we arrive at the final one. This means we have to pre-compute all the <code>intermediate_roots</code> and pass them to the circuit to use in validating Merkle proofs.</p>
+<p>Check out https://github.com/therealyingtong/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.</p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/prettify.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/codelab-elements.js"></script>
+
+</body>
+</html>
