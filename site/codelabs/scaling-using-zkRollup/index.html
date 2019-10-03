@@ -29,11 +29,30 @@
     
       <google-codelab-step label="Overview" duration="1">
         <h2 is-upgraded>What you&#39;ll build</h2>
-<p>In this workshop we will build circuits for zkRollup using</p>
+<p>We will attempt to create circuits and contract for rollup chain that does ether/ERC20 transfers and is much more scalable than current ethereum chain from scratch!</p>
 <h2 class="checklist" is-upgraded>What you&#39;ll learn</h2>
-<p>You will learn how to build with zkRollup</p>
+<ul class="checklist">
+<li>How to create circuits using snarkjs and circom 🤗</li>
+<li>How to implement simple arithematic constraints 😀</li>
+<li>How to verify signatures inside circuits 🎉</li>
+<li>How to verify merkel proofs of inclusion 🎊</li>
+<li>How to process transactions for zkRollup inside a circuit ❤️</li>
+<li>Creating snark proofs for transaction batch 😇</li>
+<li>Submitting proofs on chain! 🤩</li>
+</ul>
 <h2 is-upgraded>What you&#39;ll need</h2>
-<p>You will need circom and snarkjs</p>
+<ol type="1">
+<li>We are using <code>node v10.16.0</code>, which you can possibly install using <a href="https://github.com/nvm-sh/nvm/blob/master/README.md" target="_blank">nvm</a></li>
+<li>Clone this repo: <code>git clone https://github.com/rollupnc/RollupNC_tutorial</code></li>
+<li>Clone the submodules: <code>git submodule update --init --recursive</code><br>&gt; this should clone <code>circomlib</code>. We are using v0.0.6 for this tutorial. To make sure we&#39;re using the same commit, do <code>git checkout 77928872169b7179c9eee545afe0a972d15b1e64</code> in the <code>circomlib</code> repository.</li>
+<li>Install npm packages in both the root repository and the <code>circomlib</code> submodule: <code>npm i</code></li>
+</ol>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="ZkSnarks in a nutshell" duration="0">
+        <p>&lt; TBD &gt;</p>
 
 
       </google-codelab-step>
@@ -97,7 +116,7 @@
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part 1 - Simple arithmetic constraints" duration="0">
+      <google-codelab-step label="Part 1 - Simple arithmetic constraints" duration="3">
         <p>This is a contrived example to familiarise ourselves with the syntax of <code>circom</code> and how it works with <code>snarkjs</code>.</p>
 <p>Let&#39;s write a circuit to check:</p>
 <ul>
@@ -137,18 +156,26 @@ template SimpleChecks() {
 component main = SimpleChecks();
 </code></pre>
 <p>Now that we are done with this small circuit let&#39;s see how we can generate the proof for this circuit</p>
-<ol type="1">
-<li>Compile it: <code>circom circuit.circom -o circuit.json</code></li>
-<li>Generate your input for the circuit: <code>node generate_circuit_input.js</code></li>
-<li>Calculate the witness for the circuit: <code>snarkjs calculatewitness -c circuit.json -i input.json</code></li>
-<li>Generate the proof: <code>snarkjs setup -c circuit.json --protocol groth</code></li>
-<li>Verify the proof: <code>snarkjs verify</code></li>
-</ol>
+<p><strong>Compile it<br></strong></p>
+<pre><code>circom circuit.circom -o circuit.json
+</code></pre>
+<p><strong>Generate your input for the circuit<br></strong></p>
+<pre><code>node generate_circuit_input.js
+</code></pre>
+<p><strong>Calculate the witness for the circuit<br></strong></p>
+<pre><code>snarkjs calculatewitness -c circuit.json -i input.json
+</code></pre>
+<p><strong>Generate the proof<br></strong></p>
+<pre><code>snarkjs setup -c circuit.json --protocol groth
+</code></pre>
+<p><strong>Verify the proof<br></strong></p>
+<pre><code>snarkjs verify
+</code></pre>
 
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part-1 Challenge" duration="0">
+      <google-codelab-step label="Part-1 Challenge" duration="3">
         <p>It&#39;s time for a challenge guys!</p>
 <p><strong>Goal</strong> : Modify the circuit and input to take in length-4 arrays of <code>a</code>, <code>b</code>, <code>c</code>, and <code>d</code>, and perform the checks in a <code>for</code> loop. Output the sums of <code>c</code> and <code>d</code> arrays.</p>
 <p>To get you started, here&#39;s some help</p>
@@ -180,7 +207,7 @@ component main = SimpleChecks(4);
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part-2 Verifying an EdDSA signature" duration="0">
+      <google-codelab-step label="Part-2 Verifying an EdDSA signature" duration="3">
         <p>Signing data and verifying signatures are an essential part of any rollup chain you want to design. We use the EdDSA signature because it&#39;s much more efficient.</p>
 <p>This example works with useful libraries in <code>circomlib</code>. Note: we are using v0.0.6 of <code>circomlib</code>.</p>
 <h3 is-upgraded>Let&#39;s get started 🎊🎉</h3>
@@ -222,9 +249,8 @@ component main = VerifyEdDSAMiMC();
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part-2 Challenge" duration="0">
-        <h3 is-upgraded>Goal</h3>
-<p>Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.</p>
+      <google-codelab-step label="Part-2 Challenge" duration="3">
+        <p><strong>Goal</strong> : Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.</p>
 <p>To get you started:</p>
 <pre><code>include &#34;../circomlib/circuits/eddsamimc.circom&#34;;
 include &#34;../circomlib/circuits/mimc.circom&#34;;
@@ -350,6 +376,7 @@ component main = LeafExistence(2);
     
       <google-codelab-step label="Deep dive into ZkRollup" duration="0">
         <p>All state in a rollup chain is stored in a tree whose root is kept on chain and can only be changed by submitting a snark proof which certifies valid state transitions off chain. For this workshop since we are doing ERC20 style transfers we can store user balance in the leaf of merkel tree. Let&#39;s find out more!</p>
+<p class="image-container"><img alt="rollup" src="img/7d4da5ee9980537e.png"></p>
 <h2 is-upgraded>Account leaf format</h2>
 <p>Each account is represented by a single leaf in the accounts tree. It is calculated by hashing the following components in the following order:</p>
 <p><code>leaf = Hash(pubkey_x, pubkey_y, balance, nonce, token_type)</code></p>
@@ -367,7 +394,9 @@ component main = LeafExistence(2);
     pubkey: eddsa_pubkey,
     balance: integer
 }
+
 </code></pre>
+<p class="image-container"><img alt="accounts" src="img/1478a3b29f45d99e.png"></p>
 <h2 is-upgraded>Transaction</h2>
 <p>For each SNARK, we construct a Transactions Merkle tree, whose leaves are the transactions processed by the SNARK.</p>
 <pre><code>class Transaction = {
@@ -386,6 +415,21 @@ component main = LeafExistence(2);
     amount: integer
 }
 </code></pre>
+<h2 is-upgraded>Deposits to rollup</h2>
+<p>Each deposit creates a leaf in the smart contract. The smart contract checks that the nonce, token_type and balance are correct. Anyone can aggregate these deposits into a deposit_tree with a deposit_root.</p>
+<p>The coordinator can add these to the current balance tree by:</p>
+<ol type="1">
+<li>Proving that an empty_node at the same depth as the deposit_tree is empty in the account_tree.</li>
+<li>Replacing this empty_node with the deposit_root</li>
+<li>Using the same Merkle proof to calculate the new account_root.</li>
+</ol>
+<p class="image-container"><img alt="deposit" src="img/31a7fc446129834c.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 3 - Processing a single transaction" duration="0">
+        <p>We will start with processing a single transaction.</p>
 <h2 is-upgraded>Building ZkRollup Circuit</h2>
 <p>In ZkRollup, processing a single transaction involves:</p>
 <ol type="1">
@@ -397,14 +441,6 @@ component main = LeafExistence(2);
 <li>Crediting the receiver account</li>
 <li>Updating the <code>accounts_root</code>to get <code>final_root</code></li>
 </ol>
-<h2 is-upgraded>Deposits to rollup</h2>
-<p>&lt; Mention how deposits to rollup will work &gt;<br>&lt; Mention that it is out of scope for workshop &gt;<br>&lt; Mention links &gt;</p>
-
-
-      </google-codelab-step>
-    
-      <google-codelab-step label="Part 3 - Processing a single transaction" duration="0">
-        <p>We will create a circuit to perform all checks and state updates we defined in the section before this.</p>
 <h2 is-upgraded>Let&#39;s get started 🎊🎉</h2>
 <p>Create a file called <code>circuit.json</code> and fill in this boilerplate code.</p>
 <pre><code>include &#34;./leaf_existence.circom&#34;;
@@ -530,13 +566,17 @@ component main = ProcessTx(1);
       </google-codelab-step>
     
       <google-codelab-step label="Step 4 - Create intermediate root" duration="0">
-        <pre><code>    // create a component using `GetMerkleRoot` circuit.
+        <p>Now that we have updated the sender&#39;s leaf we need to recompute the account tree root.</p>
+<pre><code>    // create a component using `GetMerkleRoot` circuit.
     component computed_intermediate_root = GetMerkleRoot(k);
+
     computed_intermediate_root.leaf &lt;== newSenderLeaf.out;
+
     for (var i = 0; i &lt; k; i++){
         computed_intermediate_root.paths2_root_pos[i] &lt;== sender_proof_pos[i];
         computed_intermediate_root.paths2_root[i] &lt;== sender_proof[i];
     }
+
     // check that computed_intermediate_root.out === intermediate_root
     computed_intermediate_root.out === intermediate_root;
 </code></pre>
@@ -545,9 +585,12 @@ component main = ProcessTx(1);
       </google-codelab-step>
     
       <google-codelab-step label="Step 5 - Verify receiver account existence" duration="0">
-        <pre><code>  // verify receiver account exists in intermediate_root
+        <p>To proceed further with the transfer we need to first check if the receiver&#39;s leaf exists in the tree.</p>
+<pre><code>  // verify receiver account exists in intermediate_root
   component receiverExistence = LeafExistence(k, 3);
-  // provide the appropriate signals to this component! see senderExistence for reference
+
+  // Provide the appropriate signals to this component!
+  // See senderExistence for reference
 
 </code></pre>
 
@@ -555,9 +598,14 @@ component main = ProcessTx(1);
       </google-codelab-step>
     
       <google-codelab-step label="Step 6 - Credit receiver&#39;s account" duration="0">
-        <pre><code>  // credit receiver account and hash new receiver leaf
+        <p>We need to update the receiver&#39;s account balance with the amount sent by sender. Also create a new leaf hash for updated account.</p>
+<pre><code>  // credit receiver account and hash new receiver leaf
   component newReceiverLeaf = MultiMiMC7(3,91){
-  // provide the appropriate signals to this component! see newSenderLeaf for reference
+
+  // provide the appropriate signals to this component!
+  // see newSenderLeaf for reference
+
+
   }
 
 </code></pre>
@@ -566,9 +614,13 @@ component main = ProcessTx(1);
       </google-codelab-step>
     
       <google-codelab-step label="Step 7 - Update accounts root with receiver leaf update" duration="0">
-        <pre><code>// update accounts_root
+        <p>We need to update the intermediate accounts root with the receiver balance update</p>
+<pre><code>// update accounts_root
 component computed_final_root = GetMerkleRoot(k);
-// provide the appropriate signals to this component! see computed_intermediate_root for reference
+
+// provide the appropriate signals to this component!
+// see computed_intermediate_root for reference
+
 
 </code></pre>
 
@@ -576,22 +628,39 @@ component computed_final_root = GetMerkleRoot(k);
       </google-codelab-step>
     
       <google-codelab-step label="Step 8 - Output final account tree root" duration="0">
-        <pre><code>  // output final accounts_root
-    new_accounts_root &lt;== computed_final_root.out;
+        <p>Now we just need to send the final account tree root as output signal!</p>
+<pre><code>  // output final accounts_root
+  new_accounts_root &lt;== computed_final_root.out;
+</code></pre>
+<p>Now that we have a complete circuit its time to create inputs and verify the proof!</p>
+<p><strong>Compile it<br></strong></p>
+<pre><code>circom circuit.circom -o circuit.json
+</code></pre>
+<p><strong>Generate your input for the circuit<br></strong></p>
+<pre><code>node generate_circuit_input.js
+</code></pre>
+<p><strong>Calculate the witness for the circuit<br></strong></p>
+<pre><code>snarkjs calculatewitness -c circuit.json -i input.json
+</code></pre>
+<p><strong>Generate the proof<br></strong></p>
+<pre><code>snarkjs setup -c circuit.json --protocol groth
+</code></pre>
+<p><strong>Verify the proof<br></strong></p>
+<pre><code>snarkjs verify
 </code></pre>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Prove on-chain" duration="0">
-        <p>&lt; Add how to create solidity file and how to verify proof&gt;</p>
+        <p>&lt; Add how to create solidity file and how to verify proof &gt;</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Processing multiple transactions" duration="0">
         <p>Processing multiple transactions requires us to update the <code>accounts_root</code> many times before we arrive at the final one. This means we have to pre-compute all the <code>intermediate_roots</code> and pass them to the circuit to use in validating Merkle proofs.</p>
-<p>Check out https://github.com/therealyingtong/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.</p>
+<p>Check out https://github.com/rollupnc/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.</p>
 
 
       </google-codelab-step>

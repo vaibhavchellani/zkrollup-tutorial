@@ -16,15 +16,29 @@ Duration: 1
 
 ### What you'll build
 
-In this workshop we will build circuits for zkRollup using
+We will attempt to create circuits and contract for rollup chain that does ether/ERC20 transfers and is much more scalable than current ethereum chain from scratch!
 
 ### What you'll learn
 
-You will learn how to build with zkRollup
+- How to create circuits using snarkjs and circom 🤗
+- How to implement simple arithematic constraints 😀
+- How to verify signatures inside circuits 🎉
+- How to verify merkel proofs of inclusion 🎊
+- How to process transactions for zkRollup inside a circuit ❤️
+- Creating snark proofs for transaction batch 😇
+- Submitting proofs on chain! 🤩
 
 ### What you'll need
 
-You will need circom and snarkjs
+0. We are using `node v10.16.0`, which you can possibly install using [nvm](https://github.com/nvm-sh/nvm/blob/master/README.md)
+1. Clone this repo: `git clone https://github.com/rollupnc/RollupNC_tutorial`
+1. Clone the submodules: `git submodule update --init --recursive`
+   > this should clone `circomlib`. We are using v0.0.6 for this tutorial. To make sure we're using the same commit, do `git checkout 77928872169b7179c9eee545afe0a972d15b1e64` in the `circomlib` repository.
+1. Install npm packages in both the root repository and the `circomlib` submodule: `npm i`
+
+## ZkSnarks in a nutshell
+
+< TBD >
 
 ## ZkRollup in a nutshell
 
@@ -112,6 +126,8 @@ snarkjs proof -w witness.json --pk proving_key.json
 
 ## Part 1 - Simple arithmetic constraints
 
+duration: 3
+
 This is a contrived example to familiarise ourselves with the syntax of `circom` and how it works with `snarkjs`.
 
 Let's write a circuit to check:
@@ -159,13 +175,39 @@ component main = SimpleChecks();
 
 Now that we are done with this small circuit let's see how we can generate the proof for this circuit
 
-1. Compile it: `circom circuit.circom -o circuit.json`
-2. Generate your input for the circuit: `node generate_circuit_input.js`
-3. Calculate the witness for the circuit: `snarkjs calculatewitness -c circuit.json -i input.json`
-4. Generate the proof: `snarkjs setup -c circuit.json --protocol groth`
-5. Verify the proof: `snarkjs verify`
+**Compile it** <br>
+
+```bash
+circom circuit.circom -o circuit.json
+```
+
+**Generate your input for the circuit**<br>
+
+```bash
+node generate_circuit_input.js
+```
+
+**Calculate the witness for the circuit**<br>
+
+```bash
+snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Generate the proof**<br>
+
+```bash
+snarkjs setup -c circuit.json --protocol groth
+```
+
+**Verify the proof**<br>
+
+```bash
+snarkjs verify
+```
 
 ## Part-1 Challenge
+
+duration: 3
 
 It's time for a challenge guys!
 
@@ -200,6 +242,8 @@ component main = SimpleChecks(4);
 ```
 
 ## Part-2 Verifying an EdDSA signature
+
+duration: 3
 
 Signing data and verifying signatures are an essential part of any rollup chain you want to design. We use the EdDSA signature because it's much more efficient.
 
@@ -247,9 +291,9 @@ You know the next steps, but here's some help
 
 ## Part-2 Challenge
 
-#### Goal
+duration: 3
 
-Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.
+**Goal** : Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.
 
 To get you started:
 
@@ -386,6 +430,8 @@ Like you did in the EdDSA verification exercise, provide the preimage of the lea
 
 All state in a rollup chain is stored in a tree whose root is kept on chain and can only be changed by submitting a snark proof which certifies valid state transitions off chain. For this workshop since we are doing ERC20 style transfers we can store user balance in the leaf of merkel tree. Let's find out more!
 
+![rollup](./assets/rollup.png)
+
 ### Account leaf format
 
 Each account is represented by a single leaf in the accounts tree. It is calculated by hashing the following components in the following order:
@@ -404,8 +450,6 @@ class Account = {
 }
 ```
 
-<TODO add accounts tree picture here>
-
 For the purpose of this workshop we are going to use this minimal account leaf structure.
 
 ```js
@@ -413,7 +457,10 @@ class Account = {
     pubkey: eddsa_pubkey,
     balance: integer
 }
+
 ```
+
+![accounts](./assets/database.png)
 
 ### Transaction
 
@@ -440,6 +487,22 @@ class Transaction = {
 }
 ```
 
+### Deposits to rollup
+
+Each deposit creates a leaf in the smart contract. The smart contract checks that the nonce, token_type and balance are correct. Anyone can aggregate these deposits into a deposit_tree with a deposit_root.
+
+The coordinator can add these to the current balance tree by:
+
+1. Proving that an empty_node at the same depth as the deposit_tree is empty in the account_tree.
+2. Replacing this empty_node with the deposit_root
+3. Using the same Merkle proof to calculate the new account_root.
+
+![deposit](./assets/deposit.png)
+
+## Part 3 - Processing a single transaction
+
+We will start with processing a single transaction.
+
 ### Building ZkRollup Circuit
 
 In ZkRollup, processing a single transaction involves:
@@ -451,16 +514,6 @@ In ZkRollup, processing a single transaction involves:
 5. Checking that the receiver account exists in `intermediate_root`
 6. Crediting the receiver account
 7. Updating the `accounts_root`to get `final_root`
-
-### Deposits to rollup
-
-< Mention how deposits to rollup will work >
-< Mention that it is out of scope for workshop >
-< Mention links >
-
-## Part 3 - Processing a single transaction
-
-We will create a circuit to perform all checks and state updates we defined in the section before this.
 
 ### Let's get started 🎊🎉
 
@@ -584,6 +637,7 @@ Check that sender signature is correct and sender has signed the right message u
 We need to reduce balance of sender by amount he is trying to transfer, so if sender's balance was 100 before transfer of 10, after transfer it should be 90. Also hash the new account leaf using `MultiMiMC7` circuit template.
 
 ```C##
+
     // debit sender account and hash new sender leaf
     component newSenderLeaf = MultiMiMC7(3,91){
         newSenderLeaf.in[0] <== sender_pubkey[0];
@@ -596,14 +650,19 @@ We need to reduce balance of sender by amount he is trying to transfer, so if se
 
 ## Step 4 - Create intermediate root
 
+Now that we have updated the sender's leaf we need to recompute the account tree root.
+
 ```C##
     // create a component using `GetMerkleRoot` circuit.
     component computed_intermediate_root = GetMerkleRoot(k);
+
     computed_intermediate_root.leaf <== newSenderLeaf.out;
+
     for (var i = 0; i < k; i++){
         computed_intermediate_root.paths2_root_pos[i] <== sender_proof_pos[i];
         computed_intermediate_root.paths2_root[i] <== sender_proof[i];
     }
+
     // check that computed_intermediate_root.out === intermediate_root
     computed_intermediate_root.out === intermediate_root;
 ```
@@ -612,10 +671,14 @@ We need to reduce balance of sender by amount he is trying to transfer, so if se
 
 ## Step 5 - Verify receiver account existence
 
+To proceed further with the transfer we need to first check if the receiver's leaf exists in the tree.
+
 ```C##
   // verify receiver account exists in intermediate_root
   component receiverExistence = LeafExistence(k, 3);
-  // provide the appropriate signals to this component! see senderExistence for reference
+
+  // Provide the appropriate signals to this component!
+  // See senderExistence for reference
 
 ```
 
@@ -623,10 +686,16 @@ We need to reduce balance of sender by amount he is trying to transfer, so if se
 
 ## Step 6 - Credit receiver's account
 
+We need to update the receiver's account balance with the amount sent by sender. Also create a new leaf hash for updated account.
+
 ```C##
   // credit receiver account and hash new receiver leaf
   component newReceiverLeaf = MultiMiMC7(3,91){
-  // provide the appropriate signals to this component! see newSenderLeaf for reference
+
+  // provide the appropriate signals to this component!
+  // see newSenderLeaf for reference
+
+
   }
 
 ```
@@ -635,28 +704,67 @@ We need to reduce balance of sender by amount he is trying to transfer, so if se
 
 ## Step 7 - Update accounts root with receiver leaf update
 
+We need to update the intermediate accounts root with the receiver balance update
+
 ```C##
 // update accounts_root
 component computed_final_root = GetMerkleRoot(k);
-// provide the appropriate signals to this component! see computed_intermediate_root for reference
+
+// provide the appropriate signals to this component!
+// see computed_intermediate_root for reference
+
 
 ```
 
 ## Step 8 - Output final account tree root
 
+Now we just need to send the final account tree root as output signal!
+
 ```C##
   // output final accounts_root
-    new_accounts_root <== computed_final_root.out;
+  new_accounts_root <== computed_final_root.out;
+```
+
+Now that we have a complete circuit its time to create inputs and verify the proof!
+
+**Compile it** <br>
+
+```bash
+circom circuit.circom -o circuit.json
+```
+
+**Generate your input for the circuit**<br>
+
+```bash
+node generate_circuit_input.js
+```
+
+**Calculate the witness for the circuit**<br>
+
+```bash
+snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Generate the proof**<br>
+
+```bash
+snarkjs setup -c circuit.json --protocol groth
+```
+
+**Verify the proof**<br>
+
+```bash
+snarkjs verify
 ```
 
 <!-- ------------------------ -->
 
 ## Prove on-chain
 
-< Add how to create solidity file and how to verify proof>
+< Add how to create solidity file and how to verify proof >
 
 ## Processing multiple transactions
 
 Processing multiple transactions requires us to update the `accounts_root` many times before we arrive at the final one. This means we have to pre-compute all the `intermediate_roots` and pass them to the circuit to use in validating Merkle proofs.
 
-Check out https://github.com/therealyingtong/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.
+Check out https://github.com/rollupnc/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.
