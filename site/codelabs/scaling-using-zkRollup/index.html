@@ -42,17 +42,31 @@
 </ul>
 <h2 is-upgraded>What you&#39;ll need</h2>
 <ol type="1">
-<li>We are using <code>node v10.16.0</code>, which you can possibly install using <a href="https://github.com/nvm-sh/nvm/blob/master/README.md" target="_blank">nvm</a></li>
-<li>Clone this repo: <code>git clone https://github.com/rollupnc/RollupNC_tutorial</code></li>
-<li>Clone the submodules: <code>git submodule update --init --recursive</code><br>&gt; this should clone <code>circomlib</code>. We are using v0.0.6 for this tutorial. To make sure we&#39;re using the same commit, do <code>git checkout 77928872169b7179c9eee545afe0a972d15b1e64</code> in the <code>circomlib</code> repository.</li>
-<li>Install npm packages in both the root repository and the <code>circomlib</code> submodule: <code>npm i</code></li>
+<li>Install node v10.16.0</li>
+<li>Clone this repo</li>
 </ol>
+<pre><code>git clone https://github.com/vaibhavchellani/RollupNC_tutorial
+</code></pre>
+<ol type="1">
+<li>Clone the submodules:</li>
+</ol>
+<pre><code>git submodule update --init --recursive
+</code></pre>
+<ol type="1">
+<li>Install npm packages</li>
+</ol>
+<pre><code>npm i
+
+// Since we are using circomv0.0.6 we will checkout to a commit and install dependencies
+cd circomlib; git checkout 77928872169b7179c9eee545afe0a972d15b1e64; npm i;  cd -;
+</code></pre>
+<p>That&#39;s it!</p>
 
 
       </google-codelab-step>
     
-      <google-codelab-step label="ZkSnarks in a nutshell" duration="0">
-        <p>&lt; TBD &gt;</p>
+      <google-codelab-step label="ZkSnark – The Moon Math" duration="0">
+        <p>&lt; Brief up about zkSnarks&gt;<br>&lt; Relavent links to learn more &gt;<br>&lt; How much are we going to use in this workshop &gt;</p>
 
 
       </google-codelab-step>
@@ -79,12 +93,6 @@
 <li>Sub cent fees for transactions</li>
 <li>Can create rollup chain for any state transitions not just transfers( fairWin anyone?! )</li>
 </ul>
-
-
-      </google-codelab-step>
-    
-      <google-codelab-step label="ZkSnark – The Moon Math" duration="0">
-        <p>&lt; Brief up about zkSnarks&gt;<br>&lt; Relavent links to learn more &gt;<br>&lt; How much are we going to use in this workshop &gt;</p>
 
 
       </google-codelab-step>

@@ -30,15 +30,35 @@ We will attempt to create circuits and contract for rollup chain that does ether
 
 ### What you'll need
 
-0. We are using `node v10.16.0`, which you can possibly install using [nvm](https://github.com/nvm-sh/nvm/blob/master/README.md)
-1. Clone this repo: `git clone https://github.com/rollupnc/RollupNC_tutorial`
-1. Clone the submodules: `git submodule update --init --recursive`
-   > this should clone `circomlib`. We are using v0.0.6 for this tutorial. To make sure we're using the same commit, do `git checkout 77928872169b7179c9eee545afe0a972d15b1e64` in the `circomlib` repository.
-1. Install npm packages in both the root repository and the `circomlib` submodule: `npm i`
+0. Install node v10.16.0
+1. Clone this repo
 
-## ZkSnarks in a nutshell
+```bash
+git clone https://github.com/vaibhavchellani/RollupNC_tutorial
+```
 
-< TBD >
+2. Clone the submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+3. Install npm packages
+
+```bash
+npm i
+
+// Since we are using circomv0.0.6 we will checkout to a commit and install dependencies
+cd circomlib; git checkout 77928872169b7179c9eee545afe0a972d15b1e64; npm i;  cd -;
+```
+
+That's it!
+
+## ZkSnark -- The Moon Math
+
+< Brief up about zkSnarks>
+< Relavent links to learn more >
+< How much are we going to use in this workshop >
 
 ## ZkRollup in a nutshell
 
@@ -69,12 +89,6 @@ There are two actors involved in a rollup chain: Coordinator and User.
 - Can create rollup chain for any state transitions not just transfers( fairWin anyone?! )
 
 <!-- ------------------------ -->
-
-## ZkSnark -- The Moon Math
-
-< Brief up about zkSnarks>
-< Relavent links to learn more >
-< How much are we going to use in this workshop >
 
 ## Using Circom and Snarkjs
 
@@ -283,11 +297,35 @@ component main = VerifyEdDSAMiMC();
 
 You know the next steps, but here's some help
 
-1. Compile it: `circom circuit.circom -o circuit.json`
-2. Generate your input for the circuit: `node generate_circuit_input.js`
-3. Calculate the witness for the circuit: `snarkjs calculatewitness -c circuit.json -i input.json`
-4. Generate the proof: `snarkjs setup -c circuit.json --protocol groth`
-5. Verify the proof: `snarkjs verify`
+**Compile it** <br>
+
+```bash
+circom circuit.circom -o circuit.json
+```
+
+**Generate your input for the circuit**<br>
+
+```bash
+node generate_circuit_input.js
+```
+
+**Calculate the witness for the circuit**<br>
+
+```bash
+snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Generate the proof**<br>
+
+```bash
+snarkjs setup -c circuit.json --protocol groth
+```
+
+**Verify the proof**<br>
+
+```bash
+snarkjs verify
+```
 
 ## Part-2 Challenge
 
@@ -726,6 +764,7 @@ Now we just need to send the final account tree root as output signal!
 ```
 
 Now that we have a complete circuit its time to create inputs and verify the proof!
+Feel free to check if you have done everything correctly from the sample circuit.
 
 **Compile it** <br>
 
