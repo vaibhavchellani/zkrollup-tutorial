@@ -25,7 +25,6 @@ We will attempt to create circuits and contract for rollup chain that does ether
 - How to verify signatures inside circuits 🎉
 - How to verify merkel proofs of inclusion 🎊
 - How to process transactions for zkRollup inside a circuit ❤️
-- Creating snark proofs for transaction batch 😇
 - Submitting proofs on chain! 🤩
 
 ### What you'll need
@@ -243,6 +242,7 @@ $ snarkjs proof -w witness.json --pk proving_key.json
 $ snarkjs verify
 ```
 
+<!--
 ## Part-1 Challenge
 
 duration: 5
@@ -258,7 +258,7 @@ template SimpleChecks(k) {
     signal private input a[k];
     signal private input b[k];
     signal input c[k];
-    signal private input d[k];
+    signal private input d[k]
     signal output out;
 
     var sum = 0;
@@ -277,9 +277,7 @@ template SimpleChecks(k) {
 }
 
 component main = SimpleChecks(4);
-```
-
-> To be clear k has to be defined at compile time NOT at proof time. Snark circiuts can be imagined like actual circuits.
+``` -->
 
 ## Part-2 Verifying an EdDSA signature
 
@@ -358,6 +356,7 @@ $ snarkjs proof -w witness.json --pk proving_key.json
 $ snarkjs verify
 ```
 
+<!--
 ## Part-2 Challenge
 
 duration: 5
@@ -396,7 +395,7 @@ template VerifyEdDSAMiMC(k) {
 }
 
 component main = VerifyEdDSAMiMC(3);
-```
+``` -->
 
 ## Part-3 Verifying a Merkle proof
 
@@ -442,6 +441,13 @@ template GetMerkleRoot(k){
     // hash of first two entries in tx Merkle proof
     component merkle_root[k];
     merkle_root[0] = MultiMiMC7(2,91);
+
+    // paths2_root_pos is a binary vector representing left or right node
+
+    // if `paths2_root_pos` is `0` `merkle_root[0].in[0]` becomes leaf
+    // and `merkle_root[0].in[1]` becomes `paths2_root[0]`
+    // if `paths2_root_pos` is `1` `merkle_root[0].in[0]` becomes `paths2_root[0]`
+    // and `merkle_root[0].in[1]` becomes `leaf`
     merkle_root[0].in[0] <== leaf - paths2_root_pos[0]* (leaf - paths2_root[0]);
     merkle_root[0].in[1] <== paths2_root[0] - paths2_root_pos[0]* (paths2_root[0] - leaf);
 
@@ -497,7 +503,7 @@ Make sure to REMOVE `component main = GetMerkleRoot(2)` from `get_merkle_root.ci
 
 Modify your input to work with `leaf_existence.circom`.
 
-## Part-3 Challenge
+<!-- ## Part-3 Challenge
 
 duration: 5
 
@@ -505,7 +511,7 @@ duration: 5
 
 Like you did in the EdDSA verification exercise in Part-2, provide the preimage of the leaf hash as private inputs to `leaf_existence.circom`, and hash them in the circuit.
 
-If you want any help, feel free to checkout `sample_challenge_leaf_existence.circom`
+If you want any help, feel free to checkout `sample_challenge_leaf_existence.circom` -->
 
 ## Deep dive into ZkRollup
 
@@ -578,7 +584,19 @@ The coordinator can add these to the current balance tree by:
 2. Replacing this empty_node with the deposit_root
 3. Using the same Merkle proof to calculate the new account_root.
 
+![deposit](./assets/depositMaking.png)
+
 ![deposit](./assets/deposit.png)
+
+### Withdraw from rollup
+
+Withdrawing is like a normal transfer state transition. For withdraw users just have to send their tokens to `zero address` which is like burning address for our chain. Tokens can only be received at this address.
+
+- Withdrawer sends a transaction to `zero address`
+- **Withdraw()** function can be called on the smart contract which does the following
+  - Verifies signature
+  - Verifies exisitence of a withdraw transaction
+  - Transfer's money from pool to specified address
 
 ## Part 3 - Processing a single transaction
 
@@ -756,12 +774,16 @@ Now that we have updated the sender's leaf we need to recompute the account tree
 To proceed further with the transfer we need to first check if the receiver's leaf exists in the tree.
 
 ```C##
-  // verify receiver account exists in intermediate_root
-  component receiverExistence = LeafExistence(k, 3);
-
-  // Provide the appropriate signals to this component!
-  // See senderExistence for reference
-
+    // verify receiver account exists in intermediate_root
+    component receiverExistence = LeafExistence(k, 3);
+    receiverExistence.preimage[0] <== receiver_pubkey[0];
+    receiverExistence.preimage[1] <== receiver_pubkey[1];
+    receiverExistence.preimage[2] <== receiver_balance;
+    receiverExistence.root <== intermediate_root;
+    for (var i = 0; i < k; i++){
+        receiverExistence.paths2_root_pos[i] <== receiver_proof_pos[i];
+        receiverExistence.paths2_root[i] <== receiver_proof[i];
+    }
 ```
 
 <!-- ------------------------ -->
@@ -771,15 +793,12 @@ To proceed further with the transfer we need to first check if the receiver's le
 We need to update the receiver's account balance with the amount sent by sender. Also create a new leaf hash for updated account.
 
 ```C##
-  // credit receiver account and hash new receiver leaf
-  component newReceiverLeaf = MultiMiMC7(3,91){
-
-  // provide the appropriate signals to this component!
-  // see newSenderLeaf for reference
-
-
-  }
-
+    // credit receiver account and hash new receiver leaf
+    component newReceiverLeaf = MultiMiMC7(3,91){
+        newReceiverLeaf.in[0] <== receiver_pubkey[0];
+        newReceiverLeaf.in[1] <== receiver_pubkey[1];
+        newReceiverLeaf.in[2] <== receiver_balance + amount;
+    }
 ```
 
 <!-- ------------------------ -->
@@ -789,12 +808,14 @@ We need to update the receiver's account balance with the amount sent by sender.
 We need to update the intermediate accounts root with the receiver balance update
 
 ```C##
-// update accounts_root
-component computed_final_root = GetMerkleRoot(k);
 
-// provide the appropriate signals to this component!
-// see computed_intermediate_root for reference
-
+    // update accounts_root
+    component computed_final_root = GetMerkleRoot(k);
+    computed_final_root.leaf <== newReceiverLeaf.out;
+    for (var i = 0; i < k; i++){
+        computed_final_root.paths2_root_pos[i] <== receiver_proof_pos[i];
+        computed_final_root.paths2_root[i] <== receiver_proof[i];
+    }
 
 ```
 
@@ -808,7 +829,115 @@ Now we just need to send the final account tree root as output signal!
 ```
 
 Now that we have a complete circuit its time to create inputs and verify the proof!
-Feel free to check if you have done everything correctly from the sample circuit.
+
+### Final circuit should look something like this
+
+```C##
+include "./leaf_existence.circom";
+include "./verify_eddsamimc.circom";
+include "./get_merkle_root.circom";
+include "../circomlib/circuits/mimc.circom";
+
+template ProcessTx(k){
+    // k is depth of accounts tree
+
+    // accounts tree info
+    signal input accounts_root;
+    signal private input intermediate_root;
+    signal private input accounts_pubkeys[2**k, 2];
+    signal private input accounts_balances[2**k];
+
+    // transactions info
+    signal private input sender_pubkey[2];
+    signal private input sender_balance;
+    signal private input receiver_pubkey[2];
+    signal private input receiver_balance;
+    signal private input amount;
+    signal private input signature_R8x;
+    signal private input signature_R8y;
+    signal private input signature_S;
+    signal private input sender_proof[k];
+    signal private input sender_proof_pos[k];
+    signal private input receiver_proof[k];
+    signal private input receiver_proof_pos[k];
+
+    // output
+    signal output new_accounts_root;
+
+    // verify sender account exists in accounts_root
+    component senderExistence = LeafExistence(k, 3);
+    senderExistence.preimage[0] <== sender_pubkey[0];
+    senderExistence.preimage[1] <== sender_pubkey[1];
+    senderExistence.preimage[2] <== sender_balance;
+    senderExistence.root <== accounts_root;
+    for (var i = 0; i < k; i++){
+        senderExistence.paths2_root_pos[i] <== sender_proof_pos[i];
+        senderExistence.paths2_root[i] <== sender_proof[i];
+    }
+
+    // check that transaction was signed by sender
+    component signatureCheck = VerifyEdDSAMiMC(5);
+    signatureCheck.from_x <== sender_pubkey[0];
+    signatureCheck.from_y <== sender_pubkey[1];
+    signatureCheck.R8x <== signature_R8x;
+    signatureCheck.R8y <== signature_R8y;
+    signatureCheck.S <== signature_S;
+    signatureCheck.preimage[0] <== sender_pubkey[0];
+    signatureCheck.preimage[1] <== sender_pubkey[1];
+    signatureCheck.preimage[2] <== receiver_pubkey[0];
+    signatureCheck.preimage[3] <== receiver_pubkey[1];
+    signatureCheck.preimage[4] <== amount;
+
+    // debit sender account and hash new sender leaf
+    component newSenderLeaf = MultiMiMC7(3,91){
+        newSenderLeaf.in[0] <== sender_pubkey[0];
+        newSenderLeaf.in[1] <== sender_pubkey[1];
+        newSenderLeaf.in[2] <== sender_balance - amount;
+    }
+
+    // update accounts_root
+    component computed_intermediate_root = GetMerkleRoot(k);
+    computed_intermediate_root.leaf <== newSenderLeaf.out;
+    for (var i = 0; i < k; i++){
+        computed_intermediate_root.paths2_root_pos[i] <== sender_proof_pos[i];
+        computed_intermediate_root.paths2_root[i] <== sender_proof[i];
+    }
+
+    // check that computed_intermediate_root.out === intermediate_root
+    computed_intermediate_root.out === intermediate_root;
+
+    // verify receiver account exists in intermediate_root
+    component receiverExistence = LeafExistence(k, 3);
+    receiverExistence.preimage[0] <== receiver_pubkey[0];
+    receiverExistence.preimage[1] <== receiver_pubkey[1];
+    receiverExistence.preimage[2] <== receiver_balance;
+    receiverExistence.root <== intermediate_root;
+    for (var i = 0; i < k; i++){
+        receiverExistence.paths2_root_pos[i] <== receiver_proof_pos[i];
+        receiverExistence.paths2_root[i] <== receiver_proof[i];
+    }
+
+    // credit receiver account and hash new receiver leaf
+    component newReceiverLeaf = MultiMiMC7(3,91){
+        newReceiverLeaf.in[0] <== receiver_pubkey[0];
+        newReceiverLeaf.in[1] <== receiver_pubkey[1];
+        newReceiverLeaf.in[2] <== receiver_balance + amount;
+    }
+
+    // update accounts_root
+    component computed_final_root = GetMerkleRoot(k);
+    computed_final_root.leaf <== newReceiverLeaf.out;
+    for (var i = 0; i < k; i++){
+        computed_final_root.paths2_root_pos[i] <== receiver_proof_pos[i];
+        computed_final_root.paths2_root[i] <== receiver_proof[i];
+    }
+
+    // output final accounts_root
+    new_accounts_root <== computed_final_root.out;
+}
+
+component main = ProcessTx(1);
+```
 
 **Compile it** <br>
 
@@ -882,5 +1011,6 @@ We were able to build a circuit which can be used to process transactions and up
 - [Rollup Implementation by IDEN3](https://github.com/iden3/rollup)
 - [Rollup Spec](https://github.com/barryWhiteHat/roll_up)
 - [Rollup Token by BarryWhiteHat](https://github.com/barryWhiteHat/roll_up_token)
+- [Demo of RollupNC](https://www.youtube.com/watch?v=sm9NZ2jQxwk)
 
-Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.
+  Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.
