@@ -868,21 +868,19 @@ Processing multiple transactions requires us to update the `accounts_root` many 
 
 Check out https://github.com/rollupnc/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.
 
-## End
+## Congratulations!
 
-We were able to be successfully build a circuit for processing transactions inside a snark and prove on chain!
+We were able to build a circuit which can be used to process transactions and update state roots in a contract onchain.
+
+### What's next?
+
+- Learn how to build DEX's using dependant trasnactions
+
+### Other helpful links
+
+- [RollupNC](https://github.com/rollupnc/RollupNC)
+- [Rollup Implementation by IDEN3](https://github.com/iden3/rollup)
+- [Rollup Spec](https://github.com/barryWhiteHat/roll_up)
+- [Rollup Token by BarryWhiteHat](https://github.com/barryWhiteHat/roll_up_token)
 
 Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.
-
-## ZkSnark aka "zero knowledge succinct non-interactive argument of knowledge"
-
-Groth16: most efficient known zk-SNARK construction
-
-Given a circuit, its public inputs, and its public output, a Prover must convince a Verifier that they know a set of intermediate gates (and possibly additional private inputs) which satisfy the circuit (i.e. produces given output with given inputs).
-
-- zero-knowledge: verifier cannot know intermediate gates and private inputs
-- succinct: proof must be verified efficiently
-- soundness (probabilistic): no invalid witness produces a proof passing verification
-- completeness: a valid witnesses can always produce a proof passing verification
-
-Groth16: constant-size proof, constant-time verification!
