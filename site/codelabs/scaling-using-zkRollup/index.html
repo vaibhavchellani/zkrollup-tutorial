@@ -702,23 +702,20 @@ component computed_final_root = GetMerkleRoot(k);
 
       </google-codelab-step>
     
-      <google-codelab-step label="End" duration="0">
-        <p>We were able to be successfully build a circuit for processing transactions inside a snark and prove on chain!</p>
-<p>Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.</p>
-
-
-      </google-codelab-step>
-    
-      <google-codelab-step label="ZkSnark aka &#34;zero knowledge succinct non-interactive argument of knowledge&#34;" duration="0">
-        <p>Groth16: most efficient known zk-SNARK construction</p>
-<p>Given a circuit, its public inputs, and its public output, a Prover must convince a Verifier that they know a set of intermediate gates (and possibly additional private inputs) which satisfy the circuit (i.e. produces given output with given inputs).</p>
+      <google-codelab-step label="Congratulations!" duration="0">
+        <p>We were able to build a circuit which can be used to process transactions and update state roots in a contract onchain.</p>
+<h2 is-upgraded>What&#39;s next?</h2>
 <ul>
-<li>zero-knowledge: verifier cannot know intermediate gates and private inputs</li>
-<li>succinct: proof must be verified efficiently</li>
-<li>soundness (probabilistic): no invalid witness produces a proof passing verification</li>
-<li>completeness: a valid witnesses can always produce a proof passing verification</li>
+<li>Learn how to build DEX&#39;s using dependant trasnactions</li>
 </ul>
-<p>Groth16: constant-size proof, constant-time verification!</p>
+<h2 is-upgraded>Other helpful links</h2>
+<ul>
+<li><a href="https://github.com/rollupnc/RollupNC" target="_blank">RollupNC</a></li>
+<li><a href="https://github.com/iden3/rollup" target="_blank">Rollup Implementation by IDEN3</a></li>
+<li><a href="https://github.com/barryWhiteHat/roll_up" target="_blank">Rollup Spec</a></li>
+<li><a href="https://github.com/barryWhiteHat/roll_up_token" target="_blank">Rollup Token by BarryWhiteHat</a></li>
+</ul>
+<p>Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.</p>
 
 
       </google-codelab-step>
