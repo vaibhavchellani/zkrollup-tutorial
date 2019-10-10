@@ -49,6 +49,7 @@ $ git submodule update --init --recursive
 $ npm i
 
 $ cd circomlib; git checkout 77928872169b7179c9eee545afe0a972d15b1e64; npm i; cd -;
+> We should use the latest version of circomlib but for the sake of workshop we are using older version
 ```
 
 That's it!
