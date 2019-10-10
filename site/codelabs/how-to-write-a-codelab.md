@@ -30,45 +30,39 @@ We will attempt to create circuits and contract for rollup chain that does ether
 
 ### What you'll need
 
-0. Install node v10.16.0
-1. Clone this repo
+1. Install node v10.16.0 possibly using [NVM](https://github.com/nvm-sh/nvm/blob/master/README.md)
+2. Clone this repo
 
 ```bash
-git clone https://github.com/vaibhavchellani/RollupNC_tutorial
+$ git clone https://github.com/vaibhavchellani/RollupNC_tutorial
 ```
 
-2. Clone the submodules:
+3. Clone the submodules:
 
 ```bash
-git submodule update --init --recursive
+$ cd RollupNC_tutorial
+$ git submodule update --init --recursive
 ```
 
-3. Install npm packages
+4. Install npm packages
 
 ```bash
-npm i
+$ npm i
 
-// Since we are using circomv0.0.6 we will checkout to a commit and install dependencies
-cd circomlib; git checkout 77928872169b7179c9eee545afe0a972d15b1e64; npm i;  cd -;
+$ cd circomlib; git checkout 77928872169b7179c9eee545afe0a972d15b1e64; npm i; cd -;
 ```
 
 That's it!
 
-## ZkSnark -- The Moon Math
-
-< Brief up about zkSnarks>
-< Relavent links to learn more >
-< How much are we going to use in this workshop >
-
 ## ZkRollup in a nutshell
 
-ZkSnarks have been used for privacy applications and for having private transactions on chains like ZCash for a few years now. Rollup utilises zkSnarks to scale ethereum by taking advantage of the succinctness and privacy provided by snarks.
+ZkSnarks have been used for privacy applications and for having private transactions on chains like ZCash for a few years now. Rollup utilises zkSnarks to scale ethereum by taking advantage of the succinctness provided by snarks.
 
 We achive scalability by not having to send user signatures on-chain and instead send one proof which signifies 1000's of signature verifications and other transaction validation checks have been done correctly off-chain.
 
 We send minified form of transactions on-chain as input to circuit to have data-available.
 
-### How zkRollup works?
+### How zkRollup works ?
 
 There are two actors involved in a rollup chain: Coordinator and User.
 
@@ -101,7 +95,7 @@ Circom and snarkjs are these compiler and helper packages by IDEN3 to compile an
 Compiles your circuit and generates compiled circuit in json format for snarkjs to use.
 
 ```bash
-circom <your_circuit_name>.circom -o circuit.json`
+$ circom <your_circuit_name>.circom -o circuit.json`
 ```
 
 #### Generate inputs for your circuit
@@ -109,7 +103,7 @@ circom <your_circuit_name>.circom -o circuit.json`
 Generates public private inputs for your circuit
 
 ```bash
-node generate_circuit_input.js
+$ node generate_circuit_input.js
 ```
 
 > Note: This exists only for the course of our workshop
@@ -119,7 +113,7 @@ node generate_circuit_input.js
 Generates witness for your circuit using the compiled circuit and input file created in the above step
 
 ```bash
-snarkjs calculatewitness -c circuit.json -i input.json
+$ snarkjs calculatewitness -c circuit.json -i input.json
 ```
 
 #### Performing trusted setup
@@ -127,7 +121,7 @@ snarkjs calculatewitness -c circuit.json -i input.json
 Remember the infamous "Trusted Setup", to perform trusted setup on your device for a circuit use the below command. It creates a Proving and Verification key for your circuit.
 
 ```bash
-snarkjs setup -c circuit.json --protocol groth
+$ snarkjs setup -c circuit.json --protocol groth
 ```
 
 #### Generate the proof
@@ -135,37 +129,61 @@ snarkjs setup -c circuit.json --protocol groth
 To generate proof for your circuit use the below command. It uses witness and proving key as inputs and generates a proof for you which can be passed around to certify correcct computation of circuit
 
 ```bash
-snarkjs proof -w witness.json --pk proving_key.json
+$ snarkjs proof -w witness.json --pk proving_key.json
 ```
+
+#### Verifying the proof
+
+To verify your proof run the below command. This command will use verification_key.json, proof.json and public.json to verify that is valid. Here we are veifying that we know a witness that the public inputs and the outputs matches the ones in the public.json file. If the proof is ok, you will see an OK in the screen or INVALID otherwise.
+
+```bash
+$ snarkjs verify
+```
+
+#### Generate the solidity verifier
+
+This command will take the verification_key.json and generate a solidity code in verifier.sol file.
+
+```bash
+$ snarkjs generateverifier
+```
+
+#### Verifying the proof on-chain
+
+The verifier contract deployed in the last step has a view function called verifyProof. This function will return true if the proof and the inputs are valid.
+
+```bash
+$ snarkjs generatecall
+```
+
+Recommended read for basic walkthrough through circom and snarkjs can be found [here](https://iden3.io/blog/circom-and-snarkjs-tutorial2.html)
 
 ## Part 1 - Simple arithmetic constraints
 
-duration: 3
+duration: 10
 
 This is a contrived example to familiarise ourselves with the syntax of `circom` and how it works with `snarkjs`.
 
 Let's write a circuit to check:
 
-- that the sum of two private inputs `a + b` is equal to a public input `c`;
-- that the product `b * c` is equal to private input `d`;
+- That the sum of two private inputs `a + b` is equal to a public input `c`;
+- That the product `b * c` is equal to private input `d`;
 
 #### Let's get started 🎊🎉
 
 ```bash
-- $ cd 1_simple_arithmetic
-- $ touch circuit.circom
-
+$ cd 1_simple_arithmetic
+$ touch circuit.circom
 ```
 
 ```C##
-
 // create template
 template SimpleChecks() {
+
     // declare a variables which will store private inputs
     signal private input a;
     signal private input b;
     signal private input d;
-
 
     // declare public input variables
     signal input c;
@@ -187,43 +205,49 @@ template SimpleChecks() {
 component main = SimpleChecks();
 ```
 
-Now that we are done with this small circuit let's see how we can generate the proof for this circuit
+Now that we are done with this small circuit let's see how we can generate the proof for this circuit.
 
 **Compile it** <br>
 
 ```bash
-circom circuit.circom -o circuit.json
+$ circom circuit.circom -o circuit.json
 ```
 
 **Generate your input for the circuit**<br>
 
 ```bash
-node generate_circuit_input.js
+$ node generate_circuit_input.js
 ```
 
 **Calculate the witness for the circuit**<br>
 
 ```bash
-snarkjs calculatewitness -c circuit.json -i input.json
+$ snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Perform trusted setup**<br>
+
+```bash
+$ snarkjs setup -c circuit.json --protocol groth
 ```
 
 **Generate the proof**<br>
 
 ```bash
-snarkjs setup -c circuit.json --protocol groth
+$ snarkjs proof -w witness.json --pk proving_key.json
 ```
 
 **Verify the proof**<br>
 
 ```bash
-snarkjs verify
+$ snarkjs verify
 ```
 
 ## Part-1 Challenge
 
-duration: 3
+duration: 5
 
-It's time for a challenge guys!
+![time](./assets/time.png)
 
 **Goal** : Modify the circuit and input to take in length-4 arrays of `a`, `b`, `c`, and `d`, and perform the checks in a `for` loop. Output the sums of `c` and `d` arrays.
 
@@ -255,6 +279,8 @@ template SimpleChecks(k) {
 component main = SimpleChecks(4);
 ```
 
+> To be clear k has to be defined at compile time NOT at proof time. Snark circiuts can be imagined like actual circuits.
+
 ## Part-2 Verifying an EdDSA signature
 
 duration: 3
@@ -266,9 +292,8 @@ This example works with useful libraries in `circomlib`. Note: we are using v0.0
 #### Let's get started 🎊🎉
 
 ```bash
-- $ cd 2_verify_eddsa
-- $ touch circuit.circom
-
+$ cd 2_verify_eddsa
+$ touch circuit.circom
 ```
 
 ```C##
@@ -300,36 +325,44 @@ You know the next steps, but here's some help
 **Compile it** <br>
 
 ```bash
-circom circuit.circom -o circuit.json
+$ circom circuit.circom -o circuit.json
 ```
 
 **Generate your input for the circuit**<br>
 
 ```bash
-node generate_circuit_input.js
+$ node generate_circuit_input.js
 ```
 
 **Calculate the witness for the circuit**<br>
 
 ```bash
-snarkjs calculatewitness -c circuit.json -i input.json
+$ snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Perform trusted setup**<br>
+
+```bash
+$ snarkjs setup -c circuit.json --protocol groth
 ```
 
 **Generate the proof**<br>
 
 ```bash
-snarkjs setup -c circuit.json --protocol groth
+$ snarkjs proof -w witness.json --pk proving_key.json
 ```
 
 **Verify the proof**<br>
 
 ```bash
-snarkjs verify
+$ snarkjs verify
 ```
 
 ## Part-2 Challenge
 
-duration: 3
+duration: 5
+
+![time](./assets/time.png)
 
 **Goal** : Modify the circuit and input to take in a length-3 preimage of the message as a private input, and hash them inside the circuit.
 
@@ -367,22 +400,25 @@ component main = VerifyEdDSAMiMC(3);
 
 ## Part-3 Verifying a Merkle proof
 
-duration: 3
+duration: 10
 
-This example shows how to write smaller templates and use them as components in the main circuit. To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let's break this down into two circuits:
+This example shows how to write smaller templates and use them as components in the main circuit.
 
-1. `get_merkle_root.circom`: this takes a leaf and a Merkle path and returns the computed Merkle root.
-2. `leaf_existence.circom`: this compares an expected Merkle root with a computed Merkle root.
+To verify a Merkle proof, we need to take in a leaf and its Merkle root, along with the path from the leaf to the root. Let's break this down into two circuits:
+
+1. `get_merkle_root.circom`: This takes a leaf and a Merkle path and returns the computed Merkle root
+2. `leaf_existence.circom`: This compares an expected Merkle root with a computed Merkle root
 
 #### Let's get started 🎊🎉
 
 ```bash
-- $ cd 3_verify_merkle
-- $ touch get_merkle_root.circom
-
+$ cd 3_verify_merkle
+$ touch get_merkle_root.circom
 ```
 
-Paste the below code to get_merkle_root.circom and go through the in line documentation.
+#### Creating merkel root
+
+Paste the below code in get_merkle_root.circom and go through the in line documentation.
 
 ```C##
 include "../circomlib/circuits/mimc.circom";
@@ -425,6 +461,8 @@ component main = GetMerkleRoot(2);
 
 Try to fill in the second line of the `for` loop using the pattern from the lines before. (The solution is in `sample_get_merkle_root.circom`.)
 
+#### Checking leaf existence in a tree
+
 Now, make the second file `leaf_existence.circom` and paste this in:
 
 ```C##
@@ -450,7 +488,6 @@ template LeafExistence(k){
 
     // equality constraint: input tx root === computed tx root
     root === computed_root.out;
-
 }
 
 component main = LeafExistence(2);
@@ -462,7 +499,13 @@ Modify your input to work with `leaf_existence.circom`.
 
 ## Part-3 Challenge
 
-Like you did in the EdDSA verification exercise, provide the preimage of the leaf hash as private inputs to `leaf_existence.circom`, and hash them in the circuit.
+duration: 5
+
+[time](./assets/time.png)
+
+Like you did in the EdDSA verification exercise in Part-2, provide the preimage of the leaf hash as private inputs to `leaf_existence.circom`, and hash them in the circuit.
+
+If you want any help, feel free to checkout `sample_challenge_leaf_existence.circom`
 
 ## Deep dive into ZkRollup
 
@@ -565,6 +608,8 @@ include "../circomlib/circuits/mimc.circom";
 
 // create template
 template ProcessTx(k){
+  // STEP 0: Initialise signals
+
   // STEP 1: Check sender's account existence
 
   // STEP 2: Check sender's account signature
@@ -592,7 +637,6 @@ component main = ProcessTx(1);
 To initialise signals just copy paste the below code in the boiler plate.
 
 ```C##
-    // NOTE: `k` is the account tree depth
 
     // accounts tree initial root
     signal input accounts_root;
@@ -629,7 +673,7 @@ To initialise signals just copy paste the below code in the boiler plate.
 
 ## Step 1 - Check Sender existence
 
-Check sender existence using the LeafExistence circuit we created in 'Part-3`. Copy paste the below code and fill out the correct signals.
+Check sender existence using the LeafExistence circuit we created in `Part-3`. Copy paste the below code and fill out the correct signals.
 
 ```C##
     // verify sender account exists in accounts_root
@@ -769,41 +813,76 @@ Feel free to check if you have done everything correctly from the sample circuit
 **Compile it** <br>
 
 ```bash
-circom circuit.circom -o circuit.json
+$ circom circuit.circom -o circuit.json
 ```
 
 **Generate your input for the circuit**<br>
 
 ```bash
-node generate_circuit_input.js
+$ node generate_circuit_input.js
 ```
 
 **Calculate the witness for the circuit**<br>
 
 ```bash
-snarkjs calculatewitness -c circuit.json -i input.json
+$ snarkjs calculatewitness -c circuit.json -i input.json
+```
+
+**Perform trusted setup**<br>
+
+```bash
+$ snarkjs setup -c circuit.json --protocol groth
 ```
 
 **Generate the proof**<br>
 
 ```bash
-snarkjs setup -c circuit.json --protocol groth
+$ snarkjs proof -w witness.json --pk proving_key.json
 ```
 
 **Verify the proof**<br>
 
 ```bash
-snarkjs verify
+$ snarkjs verify
 ```
 
-<!-- ------------------------ -->
+#### Prove on-chain
 
-## Prove on-chain
+Time to prove validity of this transaction on-chain!
 
-< Add how to create solidity file and how to verify proof >
+This will return true if the proof and the inputs are valid.
+
+```bash
+$ snarkjs generateverifier
+```
+
+Once you have deployed the contract you can use the below to generate call data for the `verify` function
+
+```bash
+$ snarkjs generatecall
+```
 
 ## Processing multiple transactions
 
 Processing multiple transactions requires us to update the `accounts_root` many times before we arrive at the final one. This means we have to pre-compute all the `intermediate_roots` and pass them to the circuit to use in validating Merkle proofs.
 
 Check out https://github.com/rollupnc/RollupNC/blob/master/snark_circuit/multiple_tokens_transfer_and_withdraw.circom to see how it was implemented.
+
+## End
+
+We were able to be successfully build a circuit for processing transactions inside a snark and prove on chain!
+
+Thanks @therealyingtong, @barrywhitehat and other collaborators of RollupNC for all the contributions to RollupNC and this workshop.
+
+## ZkSnark aka "zero knowledge succinct non-interactive argument of knowledge"
+
+Groth16: most efficient known zk-SNARK construction
+
+Given a circuit, its public inputs, and its public output, a Prover must convince a Verifier that they know a set of intermediate gates (and possibly additional private inputs) which satisfy the circuit (i.e. produces given output with given inputs).
+
+- zero-knowledge: verifier cannot know intermediate gates and private inputs
+- succinct: proof must be verified efficiently
+- soundness (probabilistic): no invalid witness produces a proof passing verification
+- completeness: a valid witnesses can always produce a proof passing verification
+
+Groth16: constant-size proof, constant-time verification!
